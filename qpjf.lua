@@ -1,9 +1,3 @@
---[[
-	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
-]]
--- Gui to Lua
--- Version: 3.2
-
 local rc7 = Instance.new("ScreenGui")
 local mini = Instance.new("ImageButton")
 local passpage = Instance.new("ImageLabel")
