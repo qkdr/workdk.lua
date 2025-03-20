@@ -273,7 +273,7 @@ local function createMainInterface(parentGui)
     titleLabel.Position = UDim2.new(0.5, -200, 0, 20)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Text = "القائمة الرئيسية"
+    titleLabel.Text = "القائمة سكريتات"
     titleLabel.TextSize = 28
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = mainFrame
@@ -330,7 +330,7 @@ local function createMainInterface(parentGui)
         viewButton.Position = UDim2.new(0, 10, 0, 130)
         viewButton.BackgroundColor3 = settings.accentColor
         viewButton.Font = Enum.Font.GothamBold
-        viewButton.Text = "مشاهدة"
+        viewButton.Text = "تشغيل"
         viewButton.TextSize = 18
         viewButton.TextColor3 = settings.textColor
         viewButton.Parent = itemFrame
@@ -493,7 +493,7 @@ local function createInfoInterface(parentGui)
     titleLabel.Position = UDim2.new(0.5, -200, 0, 20)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Text = "معلومات التطبيق"
+    titleLabel.Text = "معلومات"
     titleLabel.TextSize = 28
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = infoFrame
@@ -504,7 +504,11 @@ local function createInfoInterface(parentGui)
     infoContent.Position = UDim2.new(0.5, -275, 0, 100)
     infoContent.BackgroundTransparency = 1
     infoContent.Font = Enum.Font.Gotham
-    infoContent.Text = "هذه المكتبة توفر واجهة فخمة وأنيقة لتشغيل سكربتات خارجية داخل الواجهة.\n\nيمكنك إضافة السكربتات عبر Luna:AddScript({ ... }) ثم استدعاء Luna:Show().\n\nاستمتع بالتجربة!"
+    infoContent.Text = "سكربت ★ Reds ‏★/n/n
+سكربت فيه كل السكربتات التي تحتاجها/n
+يوفر سكربتات بأنواع كثيرة/n
+ويحتوي على خلفية وأصوات حلوة/n
+والسكربت يتحدث كل شهر/n"
     infoContent.TextSize = 18
     infoContent.TextColor3 = settings.textColor
     infoContent.TextWrapped = true
@@ -596,7 +600,7 @@ local function createOptionPanel(parentGui)
     mainButton.Position = UDim2.new(0, 10, 0, 55)
     mainButton.BackgroundColor3 = settings.accentColor
     mainButton.Font = Enum.Font.GothamBold
-    mainButton.Text = "الواجهة"
+    mainButton.Text = "سكربتات"
     mainButton.TextSize = 18
     mainButton.TextColor3 = settings.textColor
     mainButton.Parent = optionPanel
