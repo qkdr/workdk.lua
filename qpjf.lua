@@ -1,9 +1,9 @@
 ---------------------------------------------
 -- مكتبة Luna للواجهات الفخمة في Roblox
--- تُتيح إضافة سكربتات خارجية وتشغيلها مع واجهة رئيسية فخمة
+-- تُتيح إضافة سكربتات خارجية وتشغيلها مع واجهة رئيسية مميزة
 --
 -- طريقة الاستخدام:
--- local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/qkdr/workdk.lua/refs/heads/main/qpjf.lua", true))()
+-- local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/YourRepo/YourScript.lua", true))()
 -- Luna:AddScript({
 --     name = "Silent Aim",
 --     description = "يتيح لك التصويب الصامت على الأعداء.",
@@ -21,7 +21,7 @@ local settings = {
     openSound = "rbxassetid://6042053626",
     buttonSound = "rbxassetid://6026984224",
     warningSound = "rbxassetid://6042055798",
-    backgroundImage = "rbxassetid://13577851314", -- صورة خلفية الواجهة الرئيسية
+    backgroundImage = "rbxassetid://13577851314", -- خلفية الواجهة الرئيسية
     buttonColor = Color3.fromRGB(40, 40, 40),
     accentColor = Color3.fromRGB(0, 170, 100),
     textColor = Color3.fromRGB(255, 255, 255),
@@ -36,7 +36,7 @@ local settings = {
 local externalScripts = {}
 
 ---------------------------------------------
--- خدمات Roblox وأدوات
+-- خدمات Roblox
 ---------------------------------------------
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -281,7 +281,7 @@ local function createMainInterface(parentGui)
     titleLabel.Parent = mainFrame
 
     -------------------------------------------------
-    -- قسم عرض السكربتات الخارجية (مع عداد للتنفيذ)
+    -- قسم عرض السكربتات الخارجية مع عداد للتنفيذ
     -------------------------------------------------
     local extScriptsFrame = Instance.new("ScrollingFrame")
     extScriptsFrame.Name = "ExternalScriptsFrame"
@@ -401,9 +401,8 @@ local function createMainInterface(parentGui)
     closeButton.Name = "CloseButton"
     closeButton.Size = UDim2.new(0, 30, 0, 30)
     closeButton.Position = UDim2.new(1, -40, 0, 10)
-    closeButton.BackgroundTransparency = 1
-    -- استخدام زر نصي للاغلاق "X"
-    closeButton.Image = ""
+    closeButton.BackgroundTransparency = 0.5
+    closeButton.BackgroundColor3 = settings.buttonColor
     closeButton.Text = "X"
     closeButton.Font = Enum.Font.GothamBold
     closeButton.TextSize = 24
@@ -534,7 +533,7 @@ local function createInfoInterface(parentGui)
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = infoFrame
 
-    -- الإطار الشفاف لمعلومات اللاعب
+    -- إطار معلومات اللاعب (صورة صغيرة + بيانات)
     local infoContainer = Instance.new("Frame")
     infoContainer.Name = "InfoContainer"
     infoContainer.Size = UDim2.new(1, -40, 0, 120)
@@ -629,7 +628,6 @@ local function createInfoInterface(parentGui)
     playersGrid.Padding = UDim.new(0, 5)
     playersGrid.Parent = playersFrame
 
-    -- لكل لاعب في اللعبة (يمكن تعديل لاستثناء المحلي)
     for _, player in ipairs(Players:GetPlayers()) do
         local entry = Instance.new("Frame")
         entry.Name = "PlayerEntry_" .. player.Name
@@ -669,8 +667,10 @@ local function createInfoInterface(parentGui)
         playTimeText.Position = UDim2.new(0.72, 0, 0, 0)
         playTimeText.BackgroundTransparency = 1
         playTimeText.Font = Enum.Font.GothamBold
-        -- حساب مدة اللعب منذ انضمام اللاعب
-        local playTime = math.floor(os.time() - player.TimeJoined)
+        local playTime = 0
+        if player.TimeJoined then
+            playTime = math.floor(os.time() - player.TimeJoined)
+        end
         playTimeText.Text = "وقت العب: " .. playTime .. " ثواني"
         playTimeText.TextSize = 16
         playTimeText.TextColor3 = settings.textColor
@@ -692,7 +692,7 @@ local function createInfoInterface(parentGui)
         teleportCorner.Parent = teleportButton
 
         teleportButton.MouseButton1Click:Connect(function()
-            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5)
             end
         end)
@@ -730,11 +730,7 @@ local function createInfoInterface(parentGui)
         end
     end)
 
-    -------------------------------------------------
-    -- نهاية واجهة المعلومات
-    -------------------------------------------------
-
-    -- زر اغلاق Info Interface (يظهر على شكل X)
+    -- زر إغلاق نافذة المعلومات (X)
     local infoCloseButton = Instance.new("TextButton")
     infoCloseButton.Name = "InfoCloseButton"
     infoCloseButton.Size = UDim2.new(0, 30, 0, 30)
@@ -814,7 +810,11 @@ local function createOptionPanel(parentGui)
         btnSound.Volume = 0.5
         btnSound.Parent = parentGui
         btnSound:Play()
-        createInfoInterface(parentGui)
+        if parentGui:FindFirstChild("InfoInterface") then
+            parentGui.InfoInterface:Destroy()
+        else
+            createInfoInterface(parentGui)
+        end
         optionPanel:Destroy()
     end)
 
@@ -846,7 +846,11 @@ local function createOptionPanel(parentGui)
         btnSound.Volume = 0.5
         btnSound.Parent = parentGui
         btnSound:Play()
-        createMainInterface(parentGui)
+        if parentGui:FindFirstChild("MainInterface") then
+            parentGui.MainInterface:Destroy()
+        else
+            createMainInterface(parentGui)
+        end
         optionPanel:Destroy()
     end)
 
@@ -927,7 +931,7 @@ function Luna:AddScript(scriptData)
 end
 
 ---------------------------------------------
--- يمكن إضافة المزيد من الوظائف إذا احتجت لذلك
+-- يمكن إضافة المزيد من الوظائف حسب الحاجة
 ---------------------------------------------
 
 return Luna
