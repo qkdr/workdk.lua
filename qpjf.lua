@@ -1,6 +1,8 @@
 ---------------------------------------------
 -- مكتبة Luna للواجهات الفخمة في Roblox
--- تُتيح إضافة مجلدات تحتوي على سكربتات خارجية وتشغيلها عبر واجهة ثنائية المستوى
+-- تُتيح إضافة مجلدات تحتوي على سكربتات خارجية وتشغيلها عبر واجهة ثنائية المستوى.
+-- تشمل نافذة الواجهة الرئيسية (MainInterface) بحجم 500×400، ونافذة المعلومات (InfoInterface) بنفس الحجم،
+-- مع تحسينات في تصميم المجلدات وإطارها، وتصحيح ميزة السحب للزر الدائري.
 --
 -- طريقة الاستخدام:
 -- local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/YourRepo/YourScript.lua", true))()
@@ -27,7 +29,7 @@ local settings = {
     openSound = "rbxassetid://6042053626",
     buttonSound = "rbxassetid://6026984224",
     warningSound = "rbxassetid://6042055798",
-    backgroundImage = "rbxassetid://13577851314", -- خلفية الواجهة الرئيسية
+    backgroundImage = "rbxassetid://13577851314", -- صورة خلفية الواجهة
     buttonColor = Color3.fromRGB(40, 40, 40),
     accentColor = Color3.fromRGB(0, 170, 100),
     textColor = Color3.fromRGB(255, 255, 255),
@@ -46,6 +48,7 @@ local externalFolders = {}
 ---------------------------------------------
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 ---------------------------------------------
@@ -227,11 +230,10 @@ end
 -- دالة إنشاء واجهة المجلدات (Folder Interface)
 ---------------------------------------------
 local function createFolderInterface(parentGui, folderData)
-    -- نافذة جديدة لعرض السكربتات داخل المجلد
     local folderFrame = Instance.new("Frame")
     folderFrame.Name = "FolderInterface"
-    folderFrame.Size = UDim2.new(0, 700, 0, 500)
-    folderFrame.Position = UDim2.new(0.5, -350, 0.5, -250)
+    folderFrame.Size = UDim2.new(0, 500, 0, 400)
+    folderFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
     folderFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     folderFrame.BackgroundTransparency = settings.transparency
     folderFrame.BorderSizePixel = 0
@@ -244,8 +246,8 @@ local function createFolderInterface(parentGui, folderData)
 
     local folderTitle = Instance.new("TextLabel")
     folderTitle.Name = "FolderTitle"
-    folderTitle.Size = UDim2.new(0, 500, 0, 50)
-    folderTitle.Position = UDim2.new(0.5, -250, 0, 10)
+    folderTitle.Size = UDim2.new(0, 400, 0, 50)
+    folderTitle.Position = UDim2.new(0.5, -200, 0, 10)
     folderTitle.BackgroundTransparency = 1
     folderTitle.Font = Enum.Font.GothamBold
     folderTitle.Text = folderData.folderName
@@ -253,7 +255,6 @@ local function createFolderInterface(parentGui, folderData)
     folderTitle.TextColor3 = settings.textColor
     folderTitle.Parent = folderFrame
 
-    -- زر رجوع لإغلاق نافذة المجلد والعودة إلى الواجهة الرئيسية
     local backButton = Instance.new("TextButton")
     backButton.Name = "BackButton"
     backButton.Size = UDim2.new(0, 80, 0, 40)
@@ -273,10 +274,9 @@ local function createFolderInterface(parentGui, folderData)
         folderFrame:Destroy()
     end)
 
-    -- قائمة عرض السكربتات داخل المجلد
     local folderScriptsFrame = Instance.new("ScrollingFrame")
     folderScriptsFrame.Name = "FolderScriptsFrame"
-    folderScriptsFrame.Size = UDim2.new(1, -40, 0, 400)
+    folderScriptsFrame.Size = UDim2.new(1, -40, 0, 300)
     folderScriptsFrame.Position = UDim2.new(0, 20, 0, 70)
     folderScriptsFrame.BackgroundTransparency = 1
     folderScriptsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -356,6 +356,7 @@ end
 
 ---------------------------------------------
 -- دالة إنشاء الواجهة الرئيسية (Main Interface)
+-- تم تعديل الحجم إلى 500×400
 ---------------------------------------------
 local function createMainInterface(parentGui)
     local openSound = Instance.new("Sound")
@@ -370,8 +371,8 @@ local function createMainInterface(parentGui)
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainInterface"
-    mainFrame.Size = UDim2.new(0, 800, 0, 500)
-    mainFrame.Position = UDim2.new(0.5, -400, 0.5, -250)
+    mainFrame.Size = UDim2.new(0, 500, 0, 400)
+    mainFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
     mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     mainFrame.BackgroundTransparency = settings.transparency
     mainFrame.BorderSizePixel = 0
@@ -382,8 +383,8 @@ local function createMainInterface(parentGui)
     mainFrame.Size = UDim2.new(0, 0, 0, 0)
     mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-        Size = UDim2.new(0, 800, 0, 500),
-        Position = UDim2.new(0.5, -400, 0.5, -250),
+        Size = UDim2.new(0, 500, 0, 400),
+        Position = UDim2.new(0.5, -250, 0.5, -200),
         Rotation = 0
     }):Play()
 
@@ -425,18 +426,16 @@ local function createMainInterface(parentGui)
     titleLabel.Parent = mainFrame
 
     -------------------------------------------------
-    -- عرض المجلدات (Folders)
+    -- عرض المجلدات (Folders) بتصميم أنيق
     -------------------------------------------------
-    local function createFolderInterface(parentGui, folderData)
-    local folderFrame = Instance.new("Frame")
-    folderFrame.Name = "FolderInterface"
-    folderFrame.Size = UDim2.new(0, 500, 0, 400)
-    folderFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
-    folderFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    folderFrame.BackgroundTransparency = settings.transparency
-    folderFrame.BorderSizePixel = 0
-    folderFrame.ClipsDescendants = true
-    folderFrame.Parent = parentGui
+    local foldersFrame = Instance.new("ScrollingFrame")
+    foldersFrame.Name = "FoldersFrame"
+    foldersFrame.Size = UDim2.new(1, -60, 0, 250)
+    foldersFrame.Position = UDim2.new(0, 30, 0, 100)
+    foldersFrame.BackgroundTransparency = 1
+    foldersFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    foldersFrame.ScrollBarThickness = 4
+    foldersFrame.Parent = mainFrame
 
     local foldersGrid = Instance.new("UIGridLayout")
     foldersGrid.CellSize = UDim2.new(0, 200, 0, 100)
@@ -608,7 +607,7 @@ local function createInfoInterface(parentGui)
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = infoFrame
 
-    -- إطار شفاف لمعلومات اللاعب
+    -- إطار شفاف لمعلومات اللاعب (بدون وقت اللعب)
     local infoContainer = Instance.new("Frame")
     infoContainer.Name = "InfoContainer"
     infoContainer.Size = UDim2.new(1, -40, 0, 100)
@@ -919,7 +918,7 @@ local function createOptionPanel(parentGui)
 end
 
 ---------------------------------------------
--- دالة إنشاء القائمة الدائرية (Circular Menu) مع إمكانية السحب
+-- دالة إنشاء القائمة الدائرية (Circular Menu) مع سحب سلس
 ---------------------------------------------
 local function createCircularMenu()
     local player = LocalPlayer
@@ -954,7 +953,7 @@ local function createCircularMenu()
     buttonUIStroke.Transparency = 0.5
     buttonUIStroke.Parent = circularButton
 
-    -- تمكين السحب (draggable)
+    -- سحب الزر بشكل سلس
     local dragging = false
     local dragInput, dragStart, startPos
 
@@ -977,7 +976,7 @@ local function createCircularMenu()
         end
     end)
 
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
+    UserInputService.InputChanged:Connect(function(input)
         if dragging and input == dragInput then
             local delta = input.Position - dragStart
             circularButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
