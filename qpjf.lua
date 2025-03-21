@@ -1,11 +1,20 @@
 ---------------------------------------------
 -- مكتبة Luna للواجهات الفخمة في Roblox
--- تُتيح إضافة سكربتات خارجية ومجلدات (لتنظيم السكربتات) وتشغيلها مع واجهة رئيسية مميزة.
+-- تُتيح إضافة مجلدات تحتوي على سكربتات خارجية وتشغيلها عبر واجهة ثنائية المستوى
 --
 -- طريقة الاستخدام:
 -- local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/YourRepo/YourScript.lua", true))()
--- Luna:AddScript({ name = "Silent Aim", description = "يتيح لك التصويب الصامت على الأعداء.", url = "https://raw.githubusercontent.com/ExampleUser/SilentAim.lua" })
--- Luna:AddFolder({ name = "Utilities", isFolder = true, items = { { name = "ESP", description = "يوضح مواقع اللاعبين.", url = "https://raw.githubusercontent.com/ExampleUser/ESP.lua" }, { name = "Fly", description = "يتيح الطيران.", url = "https://raw.githubusercontent.com/ExampleUser/Fly.lua" } } })
+-- Luna:AddFolder({
+--     folderName = "اسم المجلد",
+--     scripts = {
+--         {
+--             name = "Silent Aim",
+--             description = "يتيح لك التصويب الصامت على الأعداء.",
+--             url = "https://raw.githubusercontent.com/ExampleUser/SilentAim.lua"
+--         },
+--         -- يمكن إضافة المزيد من السكربتات
+--     }
+-- })
 -- Luna:Show()
 ---------------------------------------------
 
@@ -24,13 +33,13 @@ local settings = {
     textColor = Color3.fromRGB(255, 255, 255),
     cornerRadius = UDim.new(0, 12),
     transparency = 0.2,
-    telegramLink = "https://t.me/YourChannelLink"  -- رابط قناة تليجرام
+    telegramLink = "https://t.me/YourChannelLink"
 }
 
 ---------------------------------------------
--- بيانات العناصر الخارجية (سكربتات أو مجلدات)
+-- بيانات المجلدات الخارجية (كل مجلد يحتوي على قائمة سكربتات)
 ---------------------------------------------
-local externalScripts = {}
+local externalFolders = {}
 
 ---------------------------------------------
 -- خدمات Roblox
@@ -38,38 +47,6 @@ local externalScripts = {}
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-
----------------------------------------------
--- دالة تفعيل السحب (draggable) لعناصر معينة
----------------------------------------------
-local function makeDraggable(frame)
-    local dragging, dragInput, dragStart, startPos = false
-    frame.Active = true
-    frame.Draggable = false
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
-        if dragging and input == dragInput then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-end
 
 ---------------------------------------------
 -- دالة عرض إشعار أنيق على الشاشة
@@ -247,6 +224,137 @@ local function showConfirmationDialog(parentGui, message, confirmCallback)
 end
 
 ---------------------------------------------
+-- دالة إنشاء واجهة المجلدات (Folder Interface)
+---------------------------------------------
+local function createFolderInterface(parentGui, folderData)
+    -- نافذة جديدة لعرض السكربتات داخل المجلد
+    local folderFrame = Instance.new("Frame")
+    folderFrame.Name = "FolderInterface"
+    folderFrame.Size = UDim2.new(0, 700, 0, 500)
+    folderFrame.Position = UDim2.new(0.5, -350, 0.5, -250)
+    folderFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    folderFrame.BackgroundTransparency = settings.transparency
+    folderFrame.BorderSizePixel = 0
+    folderFrame.ClipsDescendants = true
+    folderFrame.Parent = parentGui
+
+    local folderCorner = Instance.new("UICorner")
+    folderCorner.CornerRadius = settings.cornerRadius
+    folderCorner.Parent = folderFrame
+
+    local folderTitle = Instance.new("TextLabel")
+    folderTitle.Name = "FolderTitle"
+    folderTitle.Size = UDim2.new(0, 500, 0, 50)
+    folderTitle.Position = UDim2.new(0.5, -250, 0, 10)
+    folderTitle.BackgroundTransparency = 1
+    folderTitle.Font = Enum.Font.GothamBold
+    folderTitle.Text = folderData.folderName
+    folderTitle.TextSize = 28
+    folderTitle.TextColor3 = settings.textColor
+    folderTitle.Parent = folderFrame
+
+    -- زر رجوع لإغلاق نافذة المجلد والعودة إلى الواجهة الرئيسية
+    local backButton = Instance.new("TextButton")
+    backButton.Name = "BackButton"
+    backButton.Size = UDim2.new(0, 80, 0, 40)
+    backButton.Position = UDim2.new(0, 10, 0, 10)
+    backButton.BackgroundColor3 = settings.accentColor
+    backButton.Font = Enum.Font.GothamBold
+    backButton.Text = "رجوع"
+    backButton.TextSize = 18
+    backButton.TextColor3 = settings.textColor
+    backButton.Parent = folderFrame
+
+    local backCorner = Instance.new("UICorner")
+    backCorner.CornerRadius = UDim.new(0, 8)
+    backCorner.Parent = backButton
+
+    backButton.MouseButton1Click:Connect(function()
+        folderFrame:Destroy()
+    end)
+
+    -- قائمة عرض السكربتات داخل المجلد
+    local folderScriptsFrame = Instance.new("ScrollingFrame")
+    folderScriptsFrame.Name = "FolderScriptsFrame"
+    folderScriptsFrame.Size = UDim2.new(1, -40, 0, 400)
+    folderScriptsFrame.Position = UDim2.new(0, 20, 0, 70)
+    folderScriptsFrame.BackgroundTransparency = 1
+    folderScriptsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    folderScriptsFrame.ScrollBarThickness = 4
+    folderScriptsFrame.Parent = folderFrame
+
+    local folderGrid = Instance.new("UIGridLayout")
+    folderGrid.CellSize = UDim2.new(0, 200, 0, 240)
+    folderGrid.CellPadding = UDim2.new(0, 10, 0, 10)
+    folderGrid.Parent = folderScriptsFrame
+
+    folderGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        folderScriptsFrame.CanvasSize = UDim2.new(0, folderGrid.AbsoluteContentSize.X, 0, folderGrid.AbsoluteContentSize.Y)
+    end)
+
+    for _, scriptData in ipairs(folderData.scripts or {}) do
+        local itemFrame = Instance.new("Frame")
+        itemFrame.Name = scriptData.name
+        itemFrame.Size = UDim2.new(0, 200, 0, 240)
+        itemFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        itemFrame.BackgroundTransparency = 0.7
+        itemFrame.Parent = folderScriptsFrame
+
+        local itemCorner = Instance.new("UICorner")
+        itemCorner.CornerRadius = UDim.new(0, 10)
+        itemCorner.Parent = itemFrame
+
+        local scriptLabel = Instance.new("TextLabel")
+        scriptLabel.Name = "ScriptLabel"
+        scriptLabel.Size = UDim2.new(1, -20, 0, 120)
+        scriptLabel.Position = UDim2.new(0, 10, 0, 10)
+        scriptLabel.BackgroundTransparency = 1
+        scriptLabel.Font = Enum.Font.GothamBold
+        scriptLabel.Text = scriptData.name .. "\n" .. scriptData.description
+        scriptLabel.TextSize = 16
+        scriptLabel.TextColor3 = settings.textColor
+        scriptLabel.TextWrapped = true
+        scriptLabel.Parent = itemFrame
+
+        local viewButton = Instance.new("TextButton")
+        viewButton.Name = "ViewButton"
+        viewButton.Size = UDim2.new(0, 180, 0, 40)
+        viewButton.Position = UDim2.new(0, 10, 0, 130)
+        viewButton.BackgroundColor3 = settings.accentColor
+        viewButton.Font = Enum.Font.GothamBold
+        viewButton.Text = "مشاهدة"
+        viewButton.TextSize = 18
+        viewButton.TextColor3 = settings.textColor
+        viewButton.Parent = itemFrame
+
+        local viewButtonCorner = Instance.new("UICorner")
+        viewButtonCorner.CornerRadius = UDim.new(0, 8)
+        viewButtonCorner.Parent = viewButton
+
+        viewButton.MouseEnter:Connect(function()
+            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
+        end)
+        viewButton.MouseLeave:Connect(function()
+            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
+        end)
+
+        viewButton.MouseButton1Click:Connect(function()
+            local btnSound = Instance.new("Sound")
+            btnSound.SoundId = settings.buttonSound
+            btnSound.Volume = 0.5
+            btnSound.Parent = parentGui
+            btnSound:Play()
+            showConfirmationDialog(parentGui, "هل أنت متأكد أنك تريد تشغيل " .. scriptData.name .. "؟", function()
+                loadstring(game:HttpGet(scriptData.url))()
+                showNotification(parentGui, "تم تشغيل " .. scriptData.name .. "!")
+            end)
+        end)
+    end
+
+    return folderFrame
+end
+
+---------------------------------------------
 -- دالة إنشاء الواجهة الرئيسية (Main Interface)
 ---------------------------------------------
 local function createMainInterface(parentGui)
@@ -317,120 +425,48 @@ local function createMainInterface(parentGui)
     titleLabel.Parent = mainFrame
 
     -------------------------------------------------
-    -- قسم عرض السكربتات الخارجية مع عداد للتنفيذ
+    -- عرض المجلدات (Folders)
     -------------------------------------------------
-    local extScriptsFrame = Instance.new("ScrollingFrame")
-    extScriptsFrame.Name = "ExternalScriptsFrame"
-    extScriptsFrame.Size = UDim2.new(1, -60, 0, 250)
-    extScriptsFrame.Position = UDim2.new(0, 30, 0, 100)
-    extScriptsFrame.BackgroundTransparency = 1
-    extScriptsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    extScriptsFrame.ScrollBarThickness = 4
-    extScriptsFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-    extScriptsFrame.Parent = mainFrame
+    local foldersFrame = Instance.new("ScrollingFrame")
+    foldersFrame.Name = "FoldersFrame"
+    foldersFrame.Size = UDim2.new(1, -60, 0, 300)
+    foldersFrame.Position = UDim2.new(0, 30, 0, 100)
+    foldersFrame.BackgroundTransparency = 1
+    foldersFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    foldersFrame.ScrollBarThickness = 4
+    foldersFrame.Parent = mainFrame
 
-    local grid = Instance.new("UIGridLayout")
-    grid.CellSize = UDim2.new(0, 200, 0, 240)
-    grid.CellPadding = UDim2.new(0, 10, 0, 10)
-    grid.Parent = extScriptsFrame
+    local foldersGrid = Instance.new("UIGridLayout")
+    foldersGrid.CellSize = UDim2.new(0, 200, 0, 100)
+    foldersGrid.CellPadding = UDim2.new(0, 10, 0, 10)
+    foldersGrid.Parent = foldersFrame
 
-    grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        extScriptsFrame.CanvasSize = UDim2.new(0, grid.AbsoluteContentSize.X, 0, grid.AbsoluteContentSize.Y)
+    foldersGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        foldersFrame.CanvasSize = UDim2.new(0, foldersGrid.AbsoluteContentSize.X, 0, foldersGrid.AbsoluteContentSize.Y)
     end)
 
-    for _, scriptData in ipairs(externalScripts) do
-        local itemFrame = Instance.new("Frame")
-        itemFrame.Name = scriptData.name
-        itemFrame.Size = UDim2.new(0, 200, 0, 240)
-        itemFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        itemFrame.BackgroundTransparency = 0.7
-        itemFrame.Parent = extScriptsFrame
+    for _, folderData in ipairs(externalFolders) do
+        local folderButton = Instance.new("TextButton")
+        folderButton.Name = folderData.folderName
+        folderButton.Size = UDim2.new(0, 200, 0, 100)
+        folderButton.BackgroundColor3 = settings.accentColor
+        folderButton.Font = Enum.Font.GothamBold
+        folderButton.Text = folderData.folderName
+        folderButton.TextSize = 24
+        folderButton.TextColor3 = settings.textColor
+        folderButton.Parent = foldersFrame
 
-        local itemCorner = Instance.new("UICorner")
-        itemCorner.CornerRadius = UDim.new(0, 10)
-        itemCorner.Parent = itemFrame
+        local folderCorner = Instance.new("UICorner")
+        folderCorner.CornerRadius = settings.cornerRadius
+        folderCorner.Parent = folderButton
 
-        local scriptLabel = Instance.new("TextLabel")
-        scriptLabel.Name = "ScriptLabel"
-        scriptLabel.Size = UDim2.new(1, -20, 0, 120)
-        scriptLabel.Position = UDim2.new(0, 10, 0, 10)
-        scriptLabel.BackgroundTransparency = 1
-        scriptLabel.Font = Enum.Font.GothamBold
-        scriptLabel.Text = scriptData.name .. "\n" .. scriptData.description
-        scriptLabel.TextSize = 16
-        scriptLabel.TextColor3 = settings.textColor
-        scriptLabel.TextWrapped = true
-        scriptLabel.Parent = itemFrame
-
-        local counterLabel = Instance.new("TextLabel")
-        counterLabel.Name = "CounterLabel"
-        counterLabel.Size = UDim2.new(1, -20, 0, 20)
-        counterLabel.Position = UDim2.new(0, 10, 1, -30)
-        counterLabel.BackgroundTransparency = 1
-        counterLabel.Font = Enum.Font.GothamBold
-        local counterName = "ScriptCounter_" .. scriptData.name
-        local counterValue = workspace:FindFirstChild(counterName)
-        if not counterValue then
-            counterValue = Instance.new("NumberValue")
-            counterValue.Name = counterName
-            counterValue.Value = 0
-            counterValue.Parent = workspace
-        end
-        counterLabel.Text = "التنفيذ: " .. counterValue.Value
-        counterLabel.TextSize = 16
-        counterLabel.TextColor3 = settings.textColor
-        counterLabel.Parent = itemFrame
-
-        local viewButton = Instance.new("TextButton")
-        viewButton.Name = "ViewButton"
-        viewButton.Size = UDim2.new(0, 180, 0, 40)
-        viewButton.Position = UDim2.new(0, 10, 0, 130)
-        viewButton.BackgroundColor3 = settings.accentColor
-        viewButton.Font = Enum.Font.GothamBold
-        viewButton.Text = "مشاهدة"
-        viewButton.TextSize = 18
-        viewButton.TextColor3 = settings.textColor
-        viewButton.Parent = itemFrame
-
-        local viewButtonCorner = Instance.new("UICorner")
-        viewButtonCorner.CornerRadius = UDim.new(0, 8)
-        viewButtonCorner.Parent = viewButton
-
-        viewButton.MouseEnter:Connect(function()
-            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
-        end)
-        viewButton.MouseLeave:Connect(function()
-            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
-        end)
-
-        viewButton.MouseButton1Click:Connect(function()
-            local btnSound = Instance.new("Sound")
-            btnSound.SoundId = settings.buttonSound
-            btnSound.Volume = 0.5
-            btnSound.Parent = parentGui
-            btnSound:Play()
-            TweenService:Create(viewButton, TweenInfo.new(0.2), {Size = UDim2.new(0, 190, 0, 45)}):Play()
-            wait(0.2)
-            TweenService:Create(viewButton, TweenInfo.new(0.2), {Size = UDim2.new(0, 180, 0, 40)}):Play()
-            showConfirmationDialog(parentGui, "هل أنت متأكد أنك تريد تشغيل " .. scriptData.name .. "؟", function()
-                loadstring(game:HttpGet(scriptData.url))()
-                local counterName = "ScriptCounter_" .. scriptData.name
-                local counterValue = workspace:FindFirstChild(counterName)
-                if not counterValue then
-                    counterValue = Instance.new("NumberValue")
-                    counterValue.Name = counterName
-                    counterValue.Value = 0
-                    counterValue.Parent = workspace
-                end
-                counterValue.Value = counterValue.Value + 1
-                counterLabel.Text = "التنفيذ: " .. counterValue.Value
-                showNotification(parentGui, "تم تشغيل " .. scriptData.name .. "!")
-            end)
+        folderButton.MouseButton1Click:Connect(function()
+            createFolderInterface(parentGui, folderData)
         end)
     end
 
     -------------------------------------------------
-    -- نهاية قسم السكربتات الخارجية
+    -- نهاية عرض المجلدات
     -------------------------------------------------
 
     local closeButton = Instance.new("ImageButton")
@@ -650,7 +686,7 @@ local function createInfoInterface(parentGui)
     keyLabel.TextXAlignment = Enum.TextXAlignment.Left
     keyLabel.Parent = infoTextContainer
 
-    -- قسم معلومات اللاعبين في الماب (اسم وID فقط)
+    -- قسم معلومات اللاعبين في الماب (عرض الاسم والايدي فقط)
     local playersFrame = Instance.new("ScrollingFrame")
     playersFrame.Name = "PlayersInfoFrame"
     playersFrame.Size = UDim2.new(1, -40, 0, 150)
@@ -881,7 +917,7 @@ local function createOptionPanel(parentGui)
 end
 
 ---------------------------------------------
--- دالة إنشاء القائمة الدائرية (Circular Menu)
+-- دالة إنشاء القائمة الدائرية (Circular Menu) مع إمكانية السحب
 ---------------------------------------------
 local function createCircularMenu()
     local player = LocalPlayer
@@ -906,8 +942,6 @@ local function createCircularMenu()
     circularButton.BackgroundTransparency = 0.1
     circularButton.Parent = circularMenuGUI
 
-    makeDraggable(circularButton)  -- تفعيل السحب على الزر الدائري
-
     local buttonCorner = Instance.new("UICorner")
     buttonCorner.CornerRadius = UDim.new(1, 0)
     buttonCorner.Parent = circularButton
@@ -918,892 +952,15 @@ local function createCircularMenu()
     buttonUIStroke.Transparency = 0.5
     buttonUIStroke.Parent = circularButton
 
-    local originalSize = circularButton.Size
-    circularButton.MouseEnter:Connect(function()
-        TweenService:Create(circularButton, TweenInfo.new(0.3), {Size = UDim2.new(0, 70, 0, 70), Position = UDim2.new(0.95, -35, 0.5, -35)}):Play()
-        TweenService:Create(buttonUIStroke, TweenInfo.new(0.3), {Transparency = 0}):Play()
-    end)
-    circularButton.MouseLeave:Connect(function()
-        TweenService:Create(circularButton, TweenInfo.new(0.3), {Size = originalSize, Position = UDim2.new(0.95, -30, 0.5, -30)}):Play()
-        TweenService:Create(buttonUIStroke, TweenInfo.new(0.3), {Transparency = 0.5}):Play()
-    end)
-
-    circularButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = circularMenuGUI
-        btnSound:Play()
-        createOptionPanel(circularMenuGUI)
-    end)
-
-    return circularButton, circularMenuGUI
-end
-
----------------------------------------------
--- دالة إنشاء نافذة المجلد (Folder Interface)
----------------------------------------------
-local function createFolderInterface(parentGui, folderData)
-    if parentGui:FindFirstChild("FolderInterface") then
-        parentGui.FolderInterface:Destroy()
-    end
-
-    local folderFrame = Instance.new("Frame")
-    folderFrame.Name = "FolderInterface"
-    folderFrame.Size = UDim2.new(0, 800, 0, 500)
-    folderFrame.Position = UDim2.new(0.5, -400, 0.5, -250)
-    folderFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    folderFrame.BackgroundTransparency = settings.transparency
-    folderFrame.BorderSizePixel = 0
-    folderFrame.ClipsDescendants = true
-    folderFrame.Parent = parentGui
-
-    local folderCorner = Instance.new("UICorner")
-    folderCorner.CornerRadius = settings.cornerRadius
-    folderCorner.Parent = folderFrame
-
-    local folderTitle = Instance.new("TextLabel")
-    folderTitle.Name = "FolderTitle"
-    folderTitle.Size = UDim2.new(0, 400, 0, 50)
-    folderTitle.Position = UDim2.new(0.5, -200, 0, 20)
-    folderTitle.BackgroundTransparency = 1
-    folderTitle.Font = Enum.Font.GothamBold
-    folderTitle.Text = "المجلد: " .. folderData.name
-    folderTitle.TextSize = 28
-    folderTitle.TextColor3 = settings.textColor
-    folderTitle.Parent = folderFrame
-
-    -- هنا يتم عرض محتويات المجلد (folderData.items)
-    local folderItemsFrame = Instance.new("ScrollingFrame")
-    folderItemsFrame.Name = "FolderItemsFrame"
-    folderItemsFrame.Size = UDim2.new(1, -60, 0, 350)
-    folderItemsFrame.Position = UDim2.new(0, 30, 0, 100)
-    folderItemsFrame.BackgroundTransparency = 1
-    folderItemsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    folderItemsFrame.ScrollBarThickness = 4
-    folderItemsFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-    folderItemsFrame.Parent = folderFrame
-
-    local folderGrid = Instance.new("UIGridLayout")
-    folderGrid.CellSize = UDim2.new(0, 200, 0, 240)
-    folderGrid.CellPadding = UDim2.new(0, 10, 0, 10)
-    folderGrid.Parent = folderItemsFrame
-
-    folderGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        folderItemsFrame.CanvasSize = UDim2.new(0, folderGrid.AbsoluteContentSize.X, 0, folderGrid.AbsoluteContentSize.Y)
-    end)
-
-    for _, item in ipairs(folderData.items or {}) do
-        local itemFrame = Instance.new("Frame")
-        itemFrame.Name = item.name
-        itemFrame.Size = UDim2.new(0, 200, 0, 240)
-        itemFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        itemFrame.BackgroundTransparency = 0.7
-        itemFrame.Parent = folderItemsFrame
-
-        local itemCorner = Instance.new("UICorner")
-        itemCorner.CornerRadius = UDim.new(0, 10)
-        itemCorner.Parent = itemFrame
-
-        local scriptLabel = Instance.new("TextLabel")
-        scriptLabel.Name = "ScriptLabel"
-        scriptLabel.Size = UDim2.new(1, -20, 0, 120)
-        scriptLabel.Position = UDim2.new(0, 10, 0, 10)
-        scriptLabel.BackgroundTransparency = 1
-        scriptLabel.Font = Enum.Font.GothamBold
-        scriptLabel.Text = item.name .. "\n" .. item.description
-        scriptLabel.TextSize = 16
-        scriptLabel.TextColor3 = settings.textColor
-        scriptLabel.TextWrapped = true
-        scriptLabel.Parent = itemFrame
-
-        local counterLabel = Instance.new("TextLabel")
-        counterLabel.Name = "CounterLabel"
-        counterLabel.Size = UDim2.new(1, -20, 0, 20)
-        counterLabel.Position = UDim2.new(0, 10, 1, -30)
-        counterLabel.BackgroundTransparency = 1
-        counterLabel.Font = Enum.Font.GothamBold
-        local counterName = "ScriptCounter_" .. item.name
-        local counterValue = workspace:FindFirstChild(counterName)
-        if not counterValue then
-            counterValue = Instance.new("NumberValue")
-            counterValue.Name = counterName
-            counterValue.Value = 0
-            counterValue.Parent = workspace
-        end
-        counterLabel.Text = "التنفيذ: " .. counterValue.Value
-        counterLabel.TextSize = 16
-        counterLabel.TextColor3 = settings.textColor
-        counterLabel.Parent = itemFrame
-
-        local viewButton = Instance.new("TextButton")
-        viewButton.Name = "ViewButton"
-        viewButton.Size = UDim2.new(0, 180, 0, 40)
-        viewButton.Position = UDim2.new(0, 10, 0, 130)
-        viewButton.BackgroundColor3 = settings.accentColor
-        viewButton.Font = Enum.Font.GothamBold
-        viewButton.Text = "مشاهدة"
-        viewButton.TextSize = 18
-        viewButton.TextColor3 = settings.textColor
-        viewButton.Parent = itemFrame
-
-        local viewButtonCorner = Instance.new("UICorner")
-        viewButtonCorner.CornerRadius = UDim.new(0, 8)
-        viewButtonCorner.Parent = viewButton
-
-        viewButton.MouseEnter:Connect(function()
-            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
-        end)
-        viewButton.MouseLeave:Connect(function()
-            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
-        end)
-
-        viewButton.MouseButton1Click:Connect(function()
-            local btnSound = Instance.new("Sound")
-            btnSound.SoundId = settings.buttonSound
-            btnSound.Volume = 0.5
-            btnSound.Parent = parentGui
-            btnSound:Play()
-            TweenService:Create(viewButton, TweenInfo.new(0.2), {Size = UDim2.new(0, 190, 0, 45)}):Play()
-            wait(0.2)
-            TweenService:Create(viewButton, TweenInfo.new(0.2), {Size = UDim2.new(0, 180, 0, 40)}):Play()
-            showConfirmationDialog(parentGui, "هل أنت متأكد أنك تريد تشغيل " .. item.name .. "؟", function()
-                loadstring(game:HttpGet(item.url))()
-                local counterName = "ScriptCounter_" .. item.name
-                local counterValue = workspace:FindFirstChild(counterName)
-                if not counterValue then
-                    counterValue = Instance.new("NumberValue")
-                    counterValue.Name = counterName
-                    counterValue.Value = 0
-                    counterValue.Parent = workspace
-                end
-                counterValue.Value = counterValue.Value + 1
-                counterLabel.Text = "التنفيذ: " .. counterValue.Value
-                showNotification(parentGui, "تم تشغيل " .. item.name .. "!")
-            end)
-        end)
-    end
-
-    -- زر العودة للخلف من المجلد
-    local backButton = Instance.new("TextButton")
-    backButton.Name = "BackButton"
-    backButton.Size = UDim2.new(0, 100, 0, 40)
-    backButton.Position = UDim2.new(0, 20, 0, 10)
-    backButton.BackgroundColor3 = settings.accentColor
-    backButton.Font = Enum.Font.GothamBold
-    backButton.Text = "رجوع"
-    backButton.TextSize = 18
-    backButton.TextColor3 = settings.textColor
-    backButton.Parent = folderFrame
-
-    local backButtonCorner = Instance.new("UICorner")
-    backButtonCorner.CornerRadius = UDim.new(0, 8)
-    backButtonCorner.Parent = backButton
-
-    backButton.MouseButton1Click:Connect(function()
-        folderFrame:Destroy()
-        createMainInterface(parentGui)
-    end)
-
-    -- زر إغلاق نافذة المجلد (X)
-    local folderCloseButton = Instance.new("TextButton")
-    folderCloseButton.Name = "FolderCloseButton"
-    folderCloseButton.Size = UDim2.new(0, 30, 0, 30)
-    folderCloseButton.Position = UDim2.new(1, -40, 0, 10)
-    folderCloseButton.BackgroundTransparency = 0.5
-    folderCloseButton.BackgroundColor3 = settings.buttonColor
-    folderCloseButton.Text = "X"
-    folderCloseButton.Font = Enum.Font.GothamBold
-    folderCloseButton.TextSize = 24
-    folderCloseButton.TextColor3 = settings.textColor
-    folderCloseButton.Parent = folderFrame
-    folderCloseButton.ZIndex = 10
-
-    folderCloseButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = parentGui
-        btnSound:Play()
-        TweenService:Create(folderFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 0, 0, 0),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Rotation = 5
-        }):Play()
-        wait(0.5)
-        folderFrame:Destroy()
-    end)
-
-    return folderFrame
-end
-
----------------------------------------------
--- دالة إنشاء لوحة الخيارات (Option Panel)
----------------------------------------------
-local function createOptionPanel(parentGui)
-    if parentGui:FindFirstChild("OptionPanel") then
-        parentGui.OptionPanel:Destroy()
-    end
-
-    local optionPanel = Instance.new("Frame")
-    optionPanel.Name = "OptionPanel"
-    optionPanel.Size = UDim2.new(0, 200, 0, 100)
-    optionPanel.Position = UDim2.new(0.95, -220, 0.5, -50)
-    optionPanel.BackgroundColor3 = settings.buttonColor
-    optionPanel.BackgroundTransparency = 0.2
-    optionPanel.BorderSizePixel = 0
-    optionPanel.Parent = parentGui
-
-    local optionCorner = Instance.new("UICorner")
-    optionCorner.CornerRadius = settings.cornerRadius
-    optionCorner.Parent = optionPanel
-
-    local infoButton = Instance.new("TextButton")
-    infoButton.Name = "InfoButton"
-    infoButton.Size = UDim2.new(1, -20, 0, 40)
-    infoButton.Position = UDim2.new(0, 10, 0, 10)
-    infoButton.BackgroundColor3 = settings.accentColor
-    infoButton.Font = Enum.Font.GothamBold
-    infoButton.Text = "معلومات"
-    infoButton.TextSize = 18
-    infoButton.TextColor3 = settings.textColor
-    infoButton.Parent = optionPanel
-
-    local infoButtonCorner = Instance.new("UICorner")
-    infoButtonCorner.CornerRadius = UDim.new(0, 8)
-    infoButtonCorner.Parent = infoButton
-
-    infoButton.MouseEnter:Connect(function()
-        TweenService:Create(infoButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
-    end)
-    infoButton.MouseLeave:Connect(function()
-        TweenService:Create(infoButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
-    end)
-
-    infoButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = parentGui
-        btnSound:Play()
-        if parentGui:FindFirstChild("InfoInterface") then
-            parentGui.InfoInterface:Destroy()
-        else
-            createInfoInterface(parentGui)
-        end
-        optionPanel:Destroy()
-    end)
-
-    local mainButton = Instance.new("TextButton")
-    mainButton.Name = "MainButton"
-    mainButton.Size = UDim2.new(1, -20, 0, 40)
-    mainButton.Position = UDim2.new(0, 10, 0, 55)
-    mainButton.BackgroundColor3 = settings.accentColor
-    mainButton.Font = Enum.Font.GothamBold
-    mainButton.Text = "الواجهة"
-    mainButton.TextSize = 18
-    mainButton.TextColor3 = settings.textColor
-    mainButton.Parent = optionPanel
-
-    local mainButtonCorner = Instance.new("UICorner")
-    mainButtonCorner.CornerRadius = UDim.new(0, 8)
-    mainButtonCorner.Parent = mainButton
-
-    mainButton.MouseEnter:Connect(function()
-        TweenService:Create(mainButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
-    end)
-    mainButton.MouseLeave:Connect(function()
-        TweenService:Create(mainButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
-    end)
-
-    mainButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = parentGui
-        btnSound:Play()
-        if parentGui:FindFirstChild("MainInterface") then
-            parentGui.MainInterface:Destroy()
-        else
-            createMainInterface(parentGui)
-        end
-        optionPanel:Destroy()
-    end)
-
-    return optionPanel
-end
-
----------------------------------------------
--- دالة إنشاء القائمة الدائرية (Circular Menu)
----------------------------------------------
-local function createCircularMenu()
-    local player = LocalPlayer
-    local playerGui = player:WaitForChild("PlayerGui")
-
-    if playerGui:FindFirstChild("CircularMenuGUI") then
-        playerGui.CircularMenuGUI:Destroy()
-    end
-
-    local circularMenuGUI = Instance.new("ScreenGui")
-    circularMenuGUI.Name = "CircularMenuGUI"
-    circularMenuGUI.ResetOnSpawn = false
-    circularMenuGUI.Parent = playerGui
-
-    local circularButton = Instance.new("ImageButton")
-    circularButton.Name = "CircularButton"
-    circularButton.Size = UDim2.new(0, 60, 0, 60)
-    circularButton.Position = UDim2.new(0.95, -30, 0.5, -30)
-    circularButton.BackgroundColor3 = settings.accentColor
-    circularButton.Image = "rbxassetid://7059346373" -- أيقونة القائمة
-    circularButton.ImageColor3 = Color3.new(1, 1, 1)
-    circularButton.BackgroundTransparency = 0.1
-    circularButton.Parent = circularMenuGUI
-
-    makeDraggable(circularButton)  -- تفعيل السحب على الزر الدائري
-
-    local buttonCorner = Instance.new("UICorner")
-    buttonCorner.CornerRadius = UDim.new(1, 0)
-    buttonCorner.Parent = circularButton
-
-    local buttonUIStroke = Instance.new("UIStroke")
-    buttonUIStroke.Color = Color3.fromRGB(255, 255, 255)
-    buttonUIStroke.Thickness = 2
-    buttonUIStroke.Transparency = 0.5
-    buttonUIStroke.Parent = circularButton
-
-    local originalSize = circularButton.Size
-    circularButton.MouseEnter:Connect(function()
-        TweenService:Create(circularButton, TweenInfo.new(0.3), {Size = UDim2.new(0, 70, 0, 70), Position = UDim2.new(0.95, -35, 0.5, -35)}):Play()
-        TweenService:Create(buttonUIStroke, TweenInfo.new(0.3), {Transparency = 0}):Play()
-    end)
-    circularButton.MouseLeave:Connect(function()
-        TweenService:Create(circularButton, TweenInfo.new(0.3), {Size = originalSize, Position = UDim2.new(0.95, -30, 0.5, -30)}):Play()
-        TweenService:Create(buttonUIStroke, TweenInfo.new(0.3), {Transparency = 0.5}):Play()
-    end)
-
-    circularButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = circularMenuGUI
-        btnSound:Play()
-        createOptionPanel(circularMenuGUI)
-    end)
-
-    return circularButton, circularMenuGUI
-end
-
----------------------------------------------
--- دالة إظهار الواجهة الرئيسية للمكتبة (Show)
----------------------------------------------
-function Luna:Show()
-    local _, screenGui = createCircularMenu()
-    createMainInterface(screenGui)
-end
-
----------------------------------------------
--- دالة إضافة سكربت خارجي أو مجلد إلى القائمة (AddScript / AddFolder)
----------------------------------------------
-function Luna:AddScript(scriptData)
-    table.insert(externalScripts, scriptData)
-end
-
----------------------------------------------
--- لتسهيل إنشاء مجلد، يمكن للمستخدم تمرير جدول يحتوي على:
--- { name = "FolderName", isFolder = true, items = { ... } }
----------------------------------------------
--- إذا كان العنصر مجلد، عند النقر عليه يتم فتح نافذة جديدة.
-local function createMainInterfaceWrapper(parentGui)
-    if not externalScripts or #externalScripts == 0 then return end
-
-    if parentGui:FindFirstChild("MainInterface") then
-        parentGui.MainInterface:Destroy()
-    end
-
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainInterface"
-    mainFrame.Size = UDim2.new(0, 800, 0, 500)
-    mainFrame.Position = UDim2.new(0.5, -400, 0.5, -250)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    mainFrame.BackgroundTransparency = settings.transparency
-    mainFrame.BorderSizePixel = 0
-    mainFrame.ClipsDescendants = true
-    mainFrame.Parent = parentGui
-
-    mainFrame.Rotation = -5
-    mainFrame.Size = UDim2.new(0, 0, 0, 0)
-    mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-        Size = UDim2.new(0, 800, 0, 500),
-        Position = UDim2.new(0.5, -400, 0.5, -250),
-        Rotation = 0
-    }):Play()
-
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = settings.cornerRadius
-    mainCorner.Parent = mainFrame
-
-    local backgroundImage = Instance.new("ImageLabel")
-    backgroundImage.Name = "BackgroundImage"
-    backgroundImage.Size = UDim2.new(1, 0, 1, 0)
-    backgroundImage.Position = UDim2.new(0, 0, 0, 0)
-    backgroundImage.BackgroundTransparency = 1
-    backgroundImage.Image = settings.backgroundImage
-    backgroundImage.ImageTransparency = 0.2
-    backgroundImage.ScaleType = Enum.ScaleType.Crop
-    backgroundImage.Parent = mainFrame
-
-    local gradient = Instance.new("UIGradient")
-    gradient.Rotation = 45
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 30, 30))
-    })
-    gradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.2),
-        NumberSequenceKeypoint.new(1, 0.8)
-    })
-    gradient.Parent = backgroundImage
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Name = "Title"
-    titleLabel.Size = UDim2.new(0, 400, 0, 50)
-    titleLabel.Position = UDim2.new(0.5, -200, 0, 20)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Text = "القائمة الرئيسية"
-    titleLabel.TextSize = 28
-    titleLabel.TextColor3 = settings.textColor
-    titleLabel.Parent = mainFrame
-
-    local extScriptsFrame = Instance.new("ScrollingFrame")
-    extScriptsFrame.Name = "ExternalScriptsFrame"
-    extScriptsFrame.Size = UDim2.new(1, -60, 0, 250)
-    extScriptsFrame.Position = UDim2.new(0, 30, 0, 100)
-    extScriptsFrame.BackgroundTransparency = 1
-    extScriptsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    extScriptsFrame.ScrollBarThickness = 4
-    extScriptsFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-    extScriptsFrame.Parent = mainFrame
-
-    local grid = Instance.new("UIGridLayout")
-    grid.CellSize = UDim2.new(0, 200, 0, 240)
-    grid.CellPadding = UDim2.new(0, 10, 0, 10)
-    grid.Parent = extScriptsFrame
-
-    grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        extScriptsFrame.CanvasSize = UDim2.new(0, grid.AbsoluteContentSize.X, 0, grid.AbsoluteContentSize.Y)
-    end)
-
-    for _, data in ipairs(externalScripts) do
-        if data.isFolder then
-            local folderFrame = Instance.new("Frame")
-            folderFrame.Name = data.name
-            folderFrame.Size = UDim2.new(0, 200, 0, 240)
-            folderFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-            folderFrame.BackgroundTransparency = 0.5
-            folderFrame.Parent = extScriptsFrame
-
-            local folderCorner = Instance.new("UICorner")
-            folderCorner.CornerRadius = UDim.new(0, 10)
-            folderCorner.Parent = folderFrame
-
-            local folderLabel = Instance.new("TextLabel")
-            folderLabel.Name = "FolderLabel"
-            folderLabel.Size = UDim2.new(1, -20, 0, 120)
-            folderLabel.Position = UDim2.new(0, 10, 0, 10)
-            folderLabel.BackgroundTransparency = 1
-            folderLabel.Font = Enum.Font.GothamBold
-            folderLabel.Text = data.name .. "\n" .. (data.description or "")
-            folderLabel.TextSize = 16
-            folderLabel.TextColor3 = settings.textColor
-            folderLabel.TextWrapped = true
-            folderLabel.Parent = folderFrame
-
-            local folderButton = Instance.new("TextButton")
-            folderButton.Name = "OpenFolderButton"
-            folderButton.Size = UDim2.new(0, 180, 0, 40)
-            folderButton.Position = UDim2.new(0, 10, 0, 130)
-            folderButton.BackgroundColor3 = settings.accentColor
-            folderButton.Font = Enum.Font.GothamBold
-            folderButton.Text = "افتح المجلد"
-            folderButton.TextSize = 18
-            folderButton.TextColor3 = settings.textColor
-            folderButton.Parent = folderFrame
-
-            local folderButtonCorner = Instance.new("UICorner")
-            folderButtonCorner.CornerRadius = UDim.new(0, 8)
-            folderButtonCorner.Parent = folderButton
-
-            folderButton.MouseButton1Click:Connect(function()
-                -- عند الضغط على المجلد، يتم فتح نافذة المجلد
-                folderFrame.Parent.Parent:Destroy() -- إغلاق الواجهة الرئيسية الحالية
-                createFolderInterface(parentGui, data)
-            end)
-        else
-            local itemFrame = Instance.new("Frame")
-            itemFrame.Name = data.name
-            itemFrame.Size = UDim2.new(0, 200, 0, 240)
-            itemFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            itemFrame.BackgroundTransparency = 0.7
-            itemFrame.Parent = extScriptsFrame
-
-            local itemCorner = Instance.new("UICorner")
-            itemCorner.CornerRadius = UDim.new(0, 10)
-            itemCorner.Parent = itemFrame
-
-            local scriptLabel = Instance.new("TextLabel")
-            scriptLabel.Name = "ScriptLabel"
-            scriptLabel.Size = UDim2.new(1, -20, 0, 120)
-            scriptLabel.Position = UDim2.new(0, 10, 0, 10)
-            scriptLabel.BackgroundTransparency = 1
-            scriptLabel.Font = Enum.Font.GothamBold
-            scriptLabel.Text = data.name .. "\n" .. data.description
-            scriptLabel.TextSize = 16
-            scriptLabel.TextColor3 = settings.textColor
-            scriptLabel.TextWrapped = true
-            scriptLabel.Parent = itemFrame
-
-            local counterLabel = Instance.new("TextLabel")
-            counterLabel.Name = "CounterLabel"
-            counterLabel.Size = UDim2.new(1, -20, 0, 20)
-            counterLabel.Position = UDim2.new(0, 10, 1, -30)
-            counterLabel.BackgroundTransparency = 1
-            counterLabel.Font = Enum.Font.GothamBold
-            local counterName = "ScriptCounter_" .. data.name
-            local counterValue = workspace:FindFirstChild(counterName)
-            if not counterValue then
-                counterValue = Instance.new("NumberValue")
-                counterValue.Name = counterName
-                counterValue.Value = 0
-                counterValue.Parent = workspace
-            end
-            counterLabel.Text = "التنفيذ: " .. counterValue.Value
-            counterLabel.TextSize = 16
-            counterLabel.TextColor3 = settings.textColor
-            counterLabel.Parent = itemFrame
-
-            local viewButton = Instance.new("TextButton")
-            viewButton.Name = "ViewButton"
-            viewButton.Size = UDim2.new(0, 180, 0, 40)
-            viewButton.Position = UDim2.new(0, 10, 0, 130)
-            viewButton.BackgroundColor3 = settings.accentColor
-            viewButton.Font = Enum.Font.GothamBold
-            viewButton.Text = "مشاهدة"
-            viewButton.TextSize = 18
-            viewButton.TextColor3 = settings.textColor
-            viewButton.Parent = itemFrame
-
-            local viewButtonCorner = Instance.new("UICorner")
-            viewButtonCorner.CornerRadius = UDim.new(0, 8)
-            viewButtonCorner.Parent = viewButton
-
-            viewButton.MouseEnter:Connect(function()
-                TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
-            end)
-            viewButton.MouseLeave:Connect(function()
-                TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
-            end)
-
-            viewButton.MouseButton1Click:Connect(function()
-                local btnSound = Instance.new("Sound")
-                btnSound.SoundId = settings.buttonSound
-                btnSound.Volume = 0.5
-                btnSound.Parent = parentGui
-                btnSound:Play()
-                TweenService:Create(viewButton, TweenInfo.new(0.2), {Size = UDim2.new(0, 190, 0, 45)}):Play()
-                wait(0.2)
-                TweenService:Create(viewButton, TweenInfo.new(0.2), {Size = UDim2.new(0, 180, 0, 40)}):Play()
-                showConfirmationDialog(parentGui, "هل أنت متأكد أنك تريد تشغيل " .. data.name .. "؟", function()
-                    loadstring(game:HttpGet(data.url))()
-                    local counterName = "ScriptCounter_" .. data.name
-                    local counterValue = workspace:FindFirstChild(counterName)
-                    if not counterValue then
-                        counterValue = Instance.new("NumberValue")
-                        counterValue.Name = counterName
-                        counterValue.Value = 0
-                        counterValue.Parent = workspace
-                    end
-                    counterValue.Value = counterValue.Value + 1
-                    counterLabel.Text = "التنفيذ: " .. counterValue.Value
-                    showNotification(parentGui, "تم تشغيل " .. data.name .. "!")
-                end)
-            end)
-        end
-    end
-
-    local closeButton = Instance.new("ImageButton")
-    closeButton.Name = "CloseButton"
-    closeButton.Size = UDim2.new(0, 30, 0, 30)
-    closeButton.Position = UDim2.new(1, -40, 0, 10)
-    closeButton.BackgroundTransparency = 0.5
-    closeButton.BackgroundColor3 = settings.buttonColor
-    closeButton.Text = "X"
-    closeButton.Font = Enum.Font.GothamBold
-    closeButton.TextSize = 24
-    closeButton.TextColor3 = settings.textColor
-    closeButton.Parent = mainFrame
-    closeButton.ZIndex = 10
-
-    closeButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = parentGui
-        btnSound:Play()
-        TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 0, 0, 0),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Rotation = 5
-        }):Play()
-        wait(0.5)
-        mainFrame:Destroy()
-    end)
-
-    local searchFrame = Instance.new("Frame")
-    searchFrame.Name = "SearchFrame"
-    searchFrame.Size = UDim2.new(0, 500, 0, 40)
-    searchFrame.Position = UDim2.new(0.5, -250, 0, 60)
-    searchFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    searchFrame.BackgroundTransparency = 0.5
-    searchFrame.Parent = mainFrame
-
-    local searchCorner = Instance.new("UICorner")
-    searchCorner.CornerRadius = UDim.new(0, 20)
-    searchCorner.Parent = searchFrame
-
-    local searchIcon = Instance.new("ImageLabel")
-    searchIcon.Name = "SearchIcon"
-    searchIcon.Size = UDim2.new(0, 20, 0, 20)
-    searchIcon.Position = UDim2.new(0, 15, 0.5, -10)
-    searchIcon.BackgroundTransparency = 1
-    searchIcon.Image = "rbxassetid://3605022185"
-    searchIcon.ImageColor3 = settings.textColor
-    searchIcon.Parent = searchFrame
-
-    local searchBox = Instance.new("TextBox")
-    searchBox.Name = "SearchBox"
-    searchBox.Size = UDim2.new(1, -50, 1, 0)
-    searchBox.Position = UDim2.new(0, 45, 0, 0)
-    searchBox.BackgroundTransparency = 1
-    searchBox.Font = Enum.Font.Gotham
-    searchBox.PlaceholderText = "بحث..."
-    searchBox.Text = ""
-    searchBox.TextSize = 18
-    searchBox.TextColor3 = settings.textColor
-    searchBox.TextXAlignment = Enum.TextXAlignment.Left
-    searchBox.Parent = searchFrame
-
-    local playerIcon = Instance.new("ImageLabel")
-    playerIcon.Name = "PlayerIcon"
-    playerIcon.Size = UDim2.new(0, 50, 0, 50)
-    playerIcon.Position = UDim2.new(0, 30, 0, 110)
-    playerIcon.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    playerIcon.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId .. "&w=150&h=150"
-    playerIcon.Parent = mainFrame
-
-    local playerIconCorner = Instance.new("UICorner")
-    playerIconCorner.CornerRadius = UDim.new(0, 25)
-    playerIconCorner.Parent = playerIcon
-
-    local playerName = Instance.new("TextLabel")
-    playerName.Name = "PlayerName"
-    playerName.Size = UDim2.new(0, 200, 0, 30)
-    playerName.Position = UDim2.new(0, 85, 0, 115)
-    playerName.BackgroundTransparency = 1
-    playerName.Font = Enum.Font.GothamSemibold
-    playerName.Text = LocalPlayer.DisplayName
-    playerName.TextSize = 18
-    playerName.TextColor3 = settings.textColor
-    playerName.TextXAlignment = Enum.TextXAlignment.Left
-    playerName.Parent = mainFrame
-
-    return mainFrame
-end
-
----------------------------------------------
--- دالة إنشاء لوحة الخيارات (Option Panel)
----------------------------------------------
-local function createOptionPanel(parentGui)
-    if parentGui:FindFirstChild("OptionPanel") then
-        parentGui.OptionPanel:Destroy()
-    end
-
-    local optionPanel = Instance.new("Frame")
-    optionPanel.Name = "OptionPanel"
-    optionPanel.Size = UDim2.new(0, 200, 0, 100)
-    optionPanel.Position = UDim2.new(0.95, -220, 0.5, -50)
-    optionPanel.BackgroundColor3 = settings.buttonColor
-    optionPanel.BackgroundTransparency = 0.2
-    optionPanel.BorderSizePixel = 0
-    optionPanel.Parent = parentGui
-
-    local optionCorner = Instance.new("UICorner")
-    optionCorner.CornerRadius = settings.cornerRadius
-    optionCorner.Parent = optionPanel
-
-    local infoButton = Instance.new("TextButton")
-    infoButton.Name = "InfoButton"
-    infoButton.Size = UDim2.new(1, -20, 0, 40)
-    infoButton.Position = UDim2.new(0, 10, 0, 10)
-    infoButton.BackgroundColor3 = settings.accentColor
-    infoButton.Font = Enum.Font.GothamBold
-    infoButton.Text = "معلومات"
-    infoButton.TextSize = 18
-    infoButton.TextColor3 = settings.textColor
-    infoButton.Parent = optionPanel
-
-    local infoButtonCorner = Instance.new("UICorner")
-    infoButtonCorner.CornerRadius = UDim.new(0, 8)
-    infoButtonCorner.Parent = infoButton
-
-    infoButton.MouseEnter:Connect(function()
-        TweenService:Create(infoButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
-    end)
-    infoButton.MouseLeave:Connect(function()
-        TweenService:Create(infoButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
-    end)
-
-    infoButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = parentGui
-        btnSound:Play()
-        if parentGui:FindFirstChild("InfoInterface") then
-            parentGui.InfoInterface:Destroy()
-        else
-            createInfoInterface(parentGui)
-        end
-        optionPanel:Destroy()
-    end)
-
-    local mainButton = Instance.new("TextButton")
-    mainButton.Name = "MainButton"
-    mainButton.Size = UDim2.new(1, -20, 0, 40)
-    mainButton.Position = UDim2.new(0, 10, 0, 55)
-    mainButton.BackgroundColor3 = settings.accentColor
-    mainButton.Font = Enum.Font.GothamBold
-    mainButton.Text = "الواجهة"
-    mainButton.TextSize = 18
-    mainButton.TextColor3 = settings.textColor
-    mainButton.Parent = optionPanel
-
-    local mainButtonCorner = Instance.new("UICorner")
-    mainButtonCorner.CornerRadius = UDim.new(0, 8)
-    mainButtonCorner.Parent = mainButton
-
-    mainButton.MouseEnter:Connect(function()
-        TweenService:Create(mainButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
-    end)
-    mainButton.MouseLeave:Connect(function()
-        TweenService:Create(mainButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
-    end)
-
-    mainButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = parentGui
-        btnSound:Play()
-        if parentGui:FindFirstChild("MainInterface") then
-            parentGui.MainInterface:Destroy()
-        else
-            createMainInterface(parentGui)
-        end
-        optionPanel:Destroy()
-    end)
-
-    return optionPanel
-end
-
----------------------------------------------
--- دالة إنشاء القائمة الدائرية (Circular Menu)
----------------------------------------------
-local function createCircularMenu()
-    local player = LocalPlayer
-    local playerGui = player:WaitForChild("PlayerGui")
-
-    if playerGui:FindFirstChild("CircularMenuGUI") then
-        playerGui.CircularMenuGUI:Destroy()
-    end
-
-    local circularMenuGUI = Instance.new("ScreenGui")
-    circularMenuGUI.Name = "CircularMenuGUI"
-    circularMenuGUI.ResetOnSpawn = false
-    circularMenuGUI.Parent = playerGui
-
-    local circularButton = Instance.new("ImageButton")
-    circularButton.Name = "CircularButton"
-    circularButton.Size = UDim2.new(0, 60, 0, 60)
-    circularButton.Position = UDim2.new(0.95, -30, 0.5, -30)
-    circularButton.BackgroundColor3 = settings.accentColor
-    circularButton.Image = "rbxassetid://7059346373" -- أيقونة القائمة
-    circularButton.ImageColor3 = Color3.new(1, 1, 1)
-    circularButton.BackgroundTransparency = 0.1
-    circularButton.Parent = circularMenuGUI
-
-    makeDraggable(circularButton)  -- تفعيل السحب
-
-    local buttonCorner = Instance.new("UICorner")
-    buttonCorner.CornerRadius = UDim.new(1, 0)
-    buttonCorner.Parent = circularButton
-
-    local buttonUIStroke = Instance.new("UIStroke")
-    buttonUIStroke.Color = Color3.fromRGB(255, 255, 255)
-    buttonUIStroke.Thickness = 2
-    buttonUIStroke.Transparency = 0.5
-    buttonUIStroke.Parent = circularButton
-
-    local originalSize = circularButton.Size
-    circularButton.MouseEnter:Connect(function()
-        TweenService:Create(circularButton, TweenInfo.new(0.3), {Size = UDim2.new(0, 70, 0, 70), Position = UDim2.new(0.95, -35, 0.5, -35)}):Play()
-        TweenService:Create(buttonUIStroke, TweenInfo.new(0.3), {Transparency = 0}):Play()
-    end)
-    circularButton.MouseLeave:Connect(function()
-        TweenService:Create(circularButton, TweenInfo.new(0.3), {Size = originalSize, Position = UDim2.new(0.95, -30, 0.5, -30)}):Play()
-        TweenService:Create(buttonUIStroke, TweenInfo.new(0.3), {Transparency = 0.5}):Play()
-    end)
-
-    circularButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = circularMenuGUI
-        btnSound:Play()
-        createOptionPanel(circularMenuGUI)
-    end)
-
-    return circularButton, circularMenuGUI
-end
-
----------------------------------------------
--- دالة إظهار الواجهة الرئيسية للمكتبة (Show)
----------------------------------------------
-function Luna:Show()
-    local _, screenGui = createCircularMenu()
-    createMainInterface(screenGui)
-end
-
----------------------------------------------
--- دالة إضافة سكربت خارجي أو مجلد إلى القائمة (AddScript)
----------------------------------------------
-function Luna:AddScript(data)
-    table.insert(externalScripts, data)
-end
-
----------------------------------------------
--- تفعيل السحب لعناصر معينة
----------------------------------------------
-local function makeDraggable(frame)
-    local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
-    frame.Active = true
-    frame.Draggable = false
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    -- تمكين السحب (draggable)
+    local dragging = false
+    local dragInput, dragStart, startPos
+
+    circularButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
-            startPos = frame.Position
+            startPos = circularButton.Position
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
@@ -1811,354 +968,26 @@ local function makeDraggable(frame)
             end)
         end
     end)
-    frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
+
+    circularButton.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
+
     game:GetService("UserInputService").InputChanged:Connect(function(input)
         if dragging and input == dragInput then
             local delta = input.Position - dragStart
-            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            circularButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
-end
 
----------------------------------------------
--- دالة إنشاء واجهة المجلد (Folder Interface)
----------------------------------------------
-local function createFolderInterface(parentGui, folderData)
-    if parentGui:FindFirstChild("FolderInterface") then
-        parentGui.FolderInterface:Destroy()
-    end
-
-    local folderFrame = Instance.new("Frame")
-    folderFrame.Name = "FolderInterface"
-    folderFrame.Size = UDim2.new(0, 800, 0, 500)
-    folderFrame.Position = UDim2.new(0.5, -400, 0.5, -250)
-    folderFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    folderFrame.BackgroundTransparency = settings.transparency
-    folderFrame.BorderSizePixel = 0
-    folderFrame.ClipsDescendants = true
-    folderFrame.Parent = parentGui
-
-    local folderCorner = Instance.new("UICorner")
-    folderCorner.CornerRadius = settings.cornerRadius
-    folderCorner.Parent = folderFrame
-
-    local folderTitle = Instance.new("TextLabel")
-    folderTitle.Name = "FolderTitle"
-    folderTitle.Size = UDim2.new(0, 400, 0, 50)
-    folderTitle.Position = UDim2.new(0.5, -200, 0, 20)
-    folderTitle.BackgroundTransparency = 1
-    folderTitle.Font = Enum.Font.GothamBold
-    folderTitle.Text = "المجلد: " .. folderData.name
-    folderTitle.TextSize = 28
-    folderTitle.TextColor3 = settings.textColor
-    folderTitle.Parent = folderFrame
-
-    local folderItemsFrame = Instance.new("ScrollingFrame")
-    folderItemsFrame.Name = "FolderItemsFrame"
-    folderItemsFrame.Size = UDim2.new(1, -60, 0, 350)
-    folderItemsFrame.Position = UDim2.new(0, 30, 0, 100)
-    folderItemsFrame.BackgroundTransparency = 1
-    folderItemsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    folderItemsFrame.ScrollBarThickness = 4
-    folderItemsFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-    folderItemsFrame.Parent = folderFrame
-
-    local folderGrid = Instance.new("UIGridLayout")
-    folderGrid.CellSize = UDim2.new(0, 200, 0, 240)
-    folderGrid.CellPadding = UDim2.new(0, 10, 0, 10)
-    folderGrid.Parent = folderItemsFrame
-
-    folderGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        folderItemsFrame.CanvasSize = UDim2.new(0, folderGrid.AbsoluteContentSize.X, 0, folderGrid.AbsoluteContentSize.Y)
-    end)
-
-    for _, item in ipairs(folderData.items or {}) do
-        local itemFrame = Instance.new("Frame")
-        itemFrame.Name = item.name
-        itemFrame.Size = UDim2.new(0, 200, 0, 240)
-        itemFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        itemFrame.BackgroundTransparency = 0.7
-        itemFrame.Parent = folderItemsFrame
-
-        local itemCorner = Instance.new("UICorner")
-        itemCorner.CornerRadius = UDim.new(0, 10)
-        itemCorner.Parent = itemFrame
-
-        local scriptLabel = Instance.new("TextLabel")
-        scriptLabel.Name = "ScriptLabel"
-        scriptLabel.Size = UDim2.new(1, -20, 0, 120)
-        scriptLabel.Position = UDim2.new(0, 10, 0, 10)
-        scriptLabel.BackgroundTransparency = 1
-        scriptLabel.Font = Enum.Font.GothamBold
-        scriptLabel.Text = item.name .. "\n" .. item.description
-        scriptLabel.TextSize = 16
-        scriptLabel.TextColor3 = settings.textColor
-        scriptLabel.TextWrapped = true
-        scriptLabel.Parent = itemFrame
-
-        local counterLabel = Instance.new("TextLabel")
-        counterLabel.Name = "CounterLabel"
-        counterLabel.Size = UDim2.new(1, -20, 0, 20)
-        counterLabel.Position = UDim2.new(0, 10, 1, -30)
-        counterLabel.BackgroundTransparency = 1
-        counterLabel.Font = Enum.Font.GothamBold
-        local counterName = "ScriptCounter_" .. item.name
-        local counterValue = workspace:FindFirstChild(counterName)
-        if not counterValue then
-            counterValue = Instance.new("NumberValue")
-            counterValue.Name = counterName
-            counterValue.Value = 0
-            counterValue.Parent = workspace
-        end
-        counterLabel.Text = "التنفيذ: " .. counterValue.Value
-        counterLabel.TextSize = 16
-        counterLabel.TextColor3 = settings.textColor
-        counterLabel.Parent = itemFrame
-
-        local viewButton = Instance.new("TextButton")
-        viewButton.Name = "ViewButton"
-        viewButton.Size = UDim2.new(0, 180, 0, 40)
-        viewButton.Position = UDim2.new(0, 10, 0, 130)
-        viewButton.BackgroundColor3 = settings.accentColor
-        viewButton.Font = Enum.Font.GothamBold
-        viewButton.Text = "مشاهدة"
-        viewButton.TextSize = 18
-        viewButton.TextColor3 = settings.textColor
-        viewButton.Parent = itemFrame
-
-        local viewButtonCorner = Instance.new("UICorner")
-        viewButtonCorner.CornerRadius = UDim.new(0, 8)
-        viewButtonCorner.Parent = viewButton
-
-        viewButton.MouseEnter:Connect(function()
-            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
-        end)
-        viewButton.MouseLeave:Connect(function()
-            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
-        end)
-
-        viewButton.MouseButton1Click:Connect(function()
-            local btnSound = Instance.new("Sound")
-            btnSound.SoundId = settings.buttonSound
-            btnSound.Volume = 0.5
-            btnSound.Parent = parentGui
-            btnSound:Play()
-            TweenService:Create(viewButton, TweenInfo.new(0.2), {Size = UDim2.new(0, 190, 0, 45)}):Play()
-            wait(0.2)
-            TweenService:Create(viewButton, TweenInfo.new(0.2), {Size = UDim2.new(0, 180, 0, 40)}):Play()
-            showConfirmationDialog(parentGui, "هل أنت متأكد أنك تريد تشغيل " .. item.name .. "؟", function()
-                loadstring(game:HttpGet(item.url))()
-                local counterName = "ScriptCounter_" .. item.name
-                local counterValue = workspace:FindFirstChild(counterName)
-                if not counterValue then
-                    counterValue = Instance.new("NumberValue")
-                    counterValue.Name = counterName
-                    counterValue.Value = 0
-                    counterValue.Parent = workspace
-                end
-                counterValue.Value = counterValue.Value + 1
-                counterLabel.Text = "التنفيذ: " .. counterValue.Value
-                showNotification(parentGui, "تم تشغيل " .. item.name .. "!")
-            end)
-        end)
-    end
-
-    local backButton = Instance.new("TextButton")
-    backButton.Name = "BackButton"
-    backButton.Size = UDim2.new(0, 100, 0, 40)
-    backButton.Position = UDim2.new(0, 20, 0, 10)
-    backButton.BackgroundColor3 = settings.accentColor
-    backButton.Font = Enum.Font.GothamBold
-    backButton.Text = "رجوع"
-    backButton.TextSize = 18
-    backButton.TextColor3 = settings.textColor
-    backButton.Parent = folderFrame
-
-    local backButtonCorner = Instance.new("UICorner")
-    backButtonCorner.CornerRadius = UDim.new(0, 8)
-    backButtonCorner.Parent = backButton
-
-    backButton.MouseButton1Click:Connect(function()
-        folderFrame:Destroy()
-        createMainInterface(parentGui)
-    end)
-
-    local folderCloseButton = Instance.new("TextButton")
-    folderCloseButton.Name = "FolderCloseButton"
-    folderCloseButton.Size = UDim2.new(0, 30, 0, 30)
-    folderCloseButton.Position = UDim2.new(1, -40, 0, 10)
-    folderCloseButton.BackgroundTransparency = 0.5
-    folderCloseButton.BackgroundColor3 = settings.buttonColor
-    folderCloseButton.Text = "X"
-    folderCloseButton.Font = Enum.Font.GothamBold
-    folderCloseButton.TextSize = 24
-    folderCloseButton.TextColor3 = settings.textColor
-    folderCloseButton.Parent = folderFrame
-    folderCloseButton.ZIndex = 10
-
-    folderCloseButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = parentGui
-        btnSound:Play()
-        TweenService:Create(folderFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 0, 0, 0),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Rotation = 5
-        }):Play()
-        wait(0.5)
-        folderFrame:Destroy()
-    end)
-
-    return folderFrame
-end
-
----------------------------------------------
--- دالة إنشاء لوحة الخيارات (Option Panel)
----------------------------------------------
-local function createOptionPanel(parentGui)
-    if parentGui:FindFirstChild("OptionPanel") then
-        parentGui.OptionPanel:Destroy()
-    end
-
-    local optionPanel = Instance.new("Frame")
-    optionPanel.Name = "OptionPanel"
-    optionPanel.Size = UDim2.new(0, 200, 0, 100)
-    optionPanel.Position = UDim2.new(0.95, -220, 0.5, -50)
-    optionPanel.BackgroundColor3 = settings.buttonColor
-    optionPanel.BackgroundTransparency = 0.2
-    optionPanel.BorderSizePixel = 0
-    optionPanel.Parent = parentGui
-
-    local optionCorner = Instance.new("UICorner")
-    optionCorner.CornerRadius = settings.cornerRadius
-    optionCorner.Parent = optionPanel
-
-    local infoButton = Instance.new("TextButton")
-    infoButton.Name = "InfoButton"
-    infoButton.Size = UDim2.new(1, -20, 0, 40)
-    infoButton.Position = UDim2.new(0, 10, 0, 10)
-    infoButton.BackgroundColor3 = settings.accentColor
-    infoButton.Font = Enum.Font.GothamBold
-    infoButton.Text = "معلومات"
-    infoButton.TextSize = 18
-    infoButton.TextColor3 = settings.textColor
-    infoButton.Parent = optionPanel
-
-    local infoButtonCorner = Instance.new("UICorner")
-    infoButtonCorner.CornerRadius = UDim.new(0, 8)
-    infoButtonCorner.Parent = infoButton
-
-    infoButton.MouseEnter:Connect(function()
-        TweenService:Create(infoButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
-    end)
-    infoButton.MouseLeave:Connect(function()
-        TweenService:Create(infoButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
-    end)
-
-    infoButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = parentGui
-        btnSound:Play()
-        if parentGui:FindFirstChild("InfoInterface") then
-            parentGui.InfoInterface:Destroy()
-        else
-            createInfoInterface(parentGui)
-        end
-        optionPanel:Destroy()
-    end)
-
-    local mainButton = Instance.new("TextButton")
-    mainButton.Name = "MainButton"
-    mainButton.Size = UDim2.new(1, -20, 0, 40)
-    mainButton.Position = UDim2.new(0, 10, 0, 55)
-    mainButton.BackgroundColor3 = settings.accentColor
-    mainButton.Font = Enum.Font.GothamBold
-    mainButton.Text = "الواجهة"
-    mainButton.TextSize = 18
-    mainButton.TextColor3 = settings.textColor
-    mainButton.Parent = optionPanel
-
-    local mainButtonCorner = Instance.new("UICorner")
-    mainButtonCorner.CornerRadius = UDim.new(0, 8)
-    mainButtonCorner.Parent = mainButton
-
-    mainButton.MouseEnter:Connect(function()
-        TweenService:Create(mainButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
-    end)
-    mainButton.MouseLeave:Connect(function()
-        TweenService:Create(mainButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
-    end)
-
-    mainButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = parentGui
-        btnSound:Play()
-        if parentGui:FindFirstChild("MainInterface") then
-            parentGui.MainInterface:Destroy()
-        else
-            createMainInterface(parentGui)
-        end
-        optionPanel:Destroy()
-    end)
-
-    return optionPanel
-end
-
----------------------------------------------
--- دالة إنشاء القائمة الدائرية (Circular Menu)
----------------------------------------------
-local function createCircularMenu()
-    local player = LocalPlayer
-    local playerGui = player:WaitForChild("PlayerGui")
-
-    if playerGui:FindFirstChild("CircularMenuGUI") then
-        playerGui.CircularMenuGUI:Destroy()
-    end
-
-    local circularMenuGUI = Instance.new("ScreenGui")
-    circularMenuGUI.Name = "CircularMenuGUI"
-    circularMenuGUI.ResetOnSpawn = false
-    circularMenuGUI.Parent = playerGui
-
-    local circularButton = Instance.new("ImageButton")
-    circularButton.Name = "CircularButton"
-    circularButton.Size = UDim2.new(0, 60, 0, 60)
-    circularButton.Position = UDim2.new(0.95, -30, 0.5, -30)
-    circularButton.BackgroundColor3 = settings.accentColor
-    circularButton.Image = "rbxassetid://7059346373" -- أيقونة القائمة
-    circularButton.ImageColor3 = Color3.new(1, 1, 1)
-    circularButton.BackgroundTransparency = 0.1
-    circularButton.Parent = circularMenuGUI
-
-    makeDraggable(circularButton)
-
-    local buttonCorner = Instance.new("UICorner")
-    buttonCorner.CornerRadius = UDim.new(1, 0)
-    buttonCorner.Parent = circularButton
-
-    local buttonUIStroke = Instance.new("UIStroke")
-    buttonUIStroke.Color = Color3.fromRGB(255, 255, 255)
-    buttonUIStroke.Thickness = 2
-    buttonUIStroke.Transparency = 0.5
-    buttonUIStroke.Parent = circularButton
-
-    local originalSize = circularButton.Size
     circularButton.MouseEnter:Connect(function()
         TweenService:Create(circularButton, TweenInfo.new(0.3), {Size = UDim2.new(0, 70, 0, 70), Position = UDim2.new(0.95, -35, 0.5, -35)}):Play()
         TweenService:Create(buttonUIStroke, TweenInfo.new(0.3), {Transparency = 0}):Play()
     end)
     circularButton.MouseLeave:Connect(function()
-        TweenService:Create(circularButton, TweenInfo.new(0.3), {Size = originalSize, Position = UDim2.new(0.95, -30, 0.5, -30)}):Play()
+        TweenService:Create(circularButton, TweenInfo.new(0.3), {Size = UDim2.new(0, 60, 0, 60), Position = UDim2.new(0.95, -30, 0.5, -30)}):Play()
         TweenService:Create(buttonUIStroke, TweenInfo.new(0.3), {Transparency = 0.5}):Play()
     end)
 
@@ -2183,14 +1012,14 @@ function Luna:Show()
 end
 
 ---------------------------------------------
--- دالة إضافة سكربت خارجي أو مجلد إلى القائمة (AddScript)
+-- دالة إضافة مجلد يحتوي على سكربتات (AddFolder)
 ---------------------------------------------
-function Luna:AddScript(data)
-    table.insert(externalScripts, data)
+function Luna:AddFolder(folderData)
+    table.insert(externalFolders, folderData)
 end
 
 ---------------------------------------------
--- يمكن إضافة المزيد من الوظائف إذا احتجت لذلك
+-- يمكن إضافة المزيد من الوظائف حسب الحاجة
 ---------------------------------------------
 
 return Luna
