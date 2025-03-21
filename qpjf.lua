@@ -1,6 +1,6 @@
 ---------------------------------------------
 -- مكتبة Luna للواجهات الفخمة في Roblox
--- يمكنك رفع هذا السكربت على GitHub ثم تحميله باستخدام loadstring
+-- تُتيح إضافة سكربتات خارجية وتشغيلها مع واجهة رئيسية مميزة
 --
 -- طريقة الاستخدام:
 -- local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/qkdr/workdk.lua/refs/heads/main/qpjf.lua", true))()
@@ -21,24 +21,26 @@ local settings = {
     openSound = "rbxassetid://6042053626",
     buttonSound = "rbxassetid://6026984224",
     warningSound = "rbxassetid://6042055798",
-    backgroundImage = "rbxassetid://13577851314", -- صورة خلفية الواجهة الرئيسية (رفع الصورة إلى Roblox)
+    backgroundImage = "rbxassetid://13577851314", -- خلفية الواجهة الرئيسية
     buttonColor = Color3.fromRGB(40, 40, 40),
-    accentColor = Color3.fromRGB(0, 170, 100),  -- اللون الأخضر للأزرار
+    accentColor = Color3.fromRGB(0, 170, 100),
     textColor = Color3.fromRGB(255, 255, 255),
     cornerRadius = UDim.new(0, 12),
-    transparency = 0.2, -- شفافية الخلفية
+    transparency = 0.2,
+    telegramLink = "https://t.me/YourChannelLink"  -- رابط قناة التليجرام
 }
 
 ---------------------------------------------
--- بيانات السكربتات الخارجية (يمكن تعديلها عبر AddScript)
+-- بيانات السكربتات الخارجية (تُضاف عبر AddScript)
 ---------------------------------------------
 local externalScripts = {}
 
 ---------------------------------------------
--- خدمات وأدوات داخلية
+-- خدمات Roblox
 ---------------------------------------------
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
 ---------------------------------------------
 -- دالة عرض إشعار أنيق على الشاشة
@@ -273,13 +275,13 @@ local function createMainInterface(parentGui)
     titleLabel.Position = UDim2.new(0.5, -200, 0, 20)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Text = "القائمة سكريتات"
+    titleLabel.Text = "القائمة الرئيسية"
     titleLabel.TextSize = 28
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = mainFrame
 
     -------------------------------------------------
-    -- قسم عرض السكربتات الخارجية كنصوص مع زر "مشاهدة"
+    -- قسم عرض السكربتات الخارجية كنصوص مع زر "مشاهدة" + عداد للتنفيذ
     -------------------------------------------------
     local extScriptsFrame = Instance.new("ScrollingFrame")
     extScriptsFrame.Name = "ExternalScriptsFrame"
@@ -324,13 +326,25 @@ local function createMainInterface(parentGui)
         scriptLabel.TextWrapped = true
         scriptLabel.Parent = itemFrame
 
+        -- عداد يظهر عدد مرات تنفيذ السكربت (يُخزن في Workspace)
+        local counterLabel = Instance.new("TextLabel")
+        counterLabel.Name = "CounterLabel"
+        counterLabel.Size = UDim2.new(1, -20, 0, 20)
+        counterLabel.Position = UDim2.new(0, 10, 1, -30)
+        counterLabel.BackgroundTransparency = 1
+        counterLabel.Font = Enum.Font.GothamBold
+        counterLabel.Text = "التنفيذ: 0"
+        counterLabel.TextSize = 16
+        counterLabel.TextColor3 = settings.textColor
+        counterLabel.Parent = itemFrame
+
         local viewButton = Instance.new("TextButton")
         viewButton.Name = "ViewButton"
         viewButton.Size = UDim2.new(0, 180, 0, 40)
         viewButton.Position = UDim2.new(0, 10, 0, 130)
         viewButton.BackgroundColor3 = settings.accentColor
         viewButton.Font = Enum.Font.GothamBold
-        viewButton.Text = "تشغيل"
+        viewButton.Text = "مشاهدة"
         viewButton.TextSize = 18
         viewButton.TextColor3 = settings.textColor
         viewButton.Parent = itemFrame
@@ -357,6 +371,17 @@ local function createMainInterface(parentGui)
             TweenService:Create(viewButton, TweenInfo.new(0.2), {Size = UDim2.new(0, 180, 0, 40)}):Play()
             showConfirmationDialog(parentGui, "هل أنت متأكد أنك تريد تشغيل " .. scriptData.name .. "؟", function()
                 loadstring(game:HttpGet(scriptData.url))()
+                -- تحديث العداد (يُخزن في Workspace كـ NumberValue)
+                local counterName = "ScriptCounter_" .. scriptData.name
+                local counterValue = workspace:FindFirstChild(counterName)
+                if not counterValue then
+                    counterValue = Instance.new("NumberValue")
+                    counterValue.Name = counterName
+                    counterValue.Value = 0
+                    counterValue.Parent = workspace
+                end
+                counterValue.Value = counterValue.Value + 1
+                counterLabel.Text = "التنفيذ: " .. counterValue.Value
                 showNotification(parentGui, "تم تشغيل " .. scriptData.name .. "!")
             end)
         end)
@@ -428,7 +453,7 @@ local function createMainInterface(parentGui)
     playerIcon.Size = UDim2.new(0, 50, 0, 50)
     playerIcon.Position = UDim2.new(0, 30, 0, 110)
     playerIcon.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    playerIcon.Image = "rbxthumb://type=AvatarHeadShot&id=" .. Players.LocalPlayer.UserId .. "&w=150&h=150"
+    playerIcon.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId .. "&w=150&h=150"
     playerIcon.Parent = mainFrame
 
     local playerIconCorner = Instance.new("UICorner")
@@ -441,7 +466,7 @@ local function createMainInterface(parentGui)
     playerName.Position = UDim2.new(0, 85, 0, 115)
     playerName.BackgroundTransparency = 1
     playerName.Font = Enum.Font.GothamSemibold
-    playerName.Text = Players.LocalPlayer.DisplayName
+    playerName.Text = LocalPlayer.DisplayName
     playerName.TextSize = 18
     playerName.TextColor3 = settings.textColor
     playerName.TextXAlignment = Enum.TextXAlignment.Left
@@ -493,46 +518,128 @@ local function createInfoInterface(parentGui)
     titleLabel.Position = UDim2.new(0.5, -200, 0, 20)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Text = "معلومات"
+    titleLabel.Text = "معلومات التطبيق"
     titleLabel.TextSize = 28
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = infoFrame
 
-    local infoContent = Instance.new("TextLabel")
-    infoContent.Name = "InfoContent"
-    infoContent.Size = UDim2.new(0, 550, 0, 200)
-    infoContent.Position = UDim2.new(0.5, -275, 0, 100)
-    infoContent.BackgroundTransparency = 1
-    infoContent.Font = Enum.Font.Gotham
-    infoContent.Text = "سكربت ★ Reds ‏★\n\nسكربت فيه كل السكربتات التي تحتاجها\nيوفر سكربتات بأنواع كثيرة\nويحتوي على خلفية وأصوات حلوة\nوالسكربت يتحدث كل شهر\n"
-    infoContent.TextSize = 18
-    infoContent.TextColor3 = settings.textColor
-    infoContent.TextWrapped = true
-    infoContent.TextYAlignment = Enum.TextYAlignment.Top
-    infoContent.Parent = infoFrame
+    -- إطار شفاف يحتوي على صورة اللاعب ومعلوماته
+    local infoContainer = Instance.new("Frame")
+    infoContainer.Name = "InfoContainer"
+    infoContainer.Size = UDim2.new(1, -40, 0, 120)
+    infoContainer.Position = UDim2.new(0, 20, 0, 80)
+    infoContainer.BackgroundTransparency = 0.5
+    infoContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    infoContainer.Parent = infoFrame
 
-    local closeButton = Instance.new("ImageButton")
-    closeButton.Name = "CloseButton"
-    closeButton.Size = UDim2.new(0, 30, 0, 30)
-    closeButton.Position = UDim2.new(1, -40, 0, 10)
-    closeButton.BackgroundTransparency = 1
-    closeButton.Image = "rbxassetid://7072725342"
-    closeButton.Parent = infoFrame
+    local containerCorner = Instance.new("UICorner")
+    containerCorner.CornerRadius = UDim.new(0, 8)
+    containerCorner.Parent = infoContainer
 
-    closeButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = parentGui
-        btnSound:Play()
-        TweenService:Create(infoFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 0, 0, 0),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Rotation = 5
-        }):Play()
-        wait(0.5)
-        infoFrame:Destroy()
+    -- صورة اللاعب صغيرة على اليسار
+    local smallPlayerIcon = Instance.new("ImageLabel")
+    smallPlayerIcon.Name = "SmallPlayerIcon"
+    smallPlayerIcon.Size = UDim2.new(0, 60, 0, 60)
+    smallPlayerIcon.Position = UDim2.new(0, 10, 0, 30)
+    smallPlayerIcon.BackgroundTransparency = 1
+    smallPlayerIcon.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId .. "&w=150&h=150"
+    smallPlayerIcon.Parent = infoContainer
+
+    local smallIconCorner = Instance.new("UICorner")
+    smallIconCorner.CornerRadius = UDim.new(0, 30)
+    smallIconCorner.Parent = smallPlayerIcon
+
+    -- إطار يحتوي على المعلومات النصية
+    local infoTextContainer = Instance.new("Frame")
+    infoTextContainer.Name = "InfoTextContainer"
+    infoTextContainer.Size = UDim2.new(1, -80, 1, 0)
+    infoTextContainer.Position = UDim2.new(0, 70, 0, 0)
+    infoTextContainer.BackgroundTransparency = 1
+    infoTextContainer.Parent = infoContainer
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "NameLabel"
+    nameLabel.Size = UDim2.new(1, 0, 0, 20)
+    nameLabel.Position = UDim2.new(0, 0, 0, 10)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.Text = "اسمك: " .. LocalPlayer.DisplayName
+    nameLabel.TextSize = 18
+    nameLabel.TextColor3 = settings.textColor
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = infoTextContainer
+
+    local idLabel = Instance.new("TextLabel")
+    idLabel.Name = "IDLabel"
+    idLabel.Size = UDim2.new(1, 0, 0, 20)
+    idLabel.Position = UDim2.new(0, 0, 0, 35)
+    idLabel.BackgroundTransparency = 1
+    idLabel.Font = Enum.Font.GothamBold
+    idLabel.Text = "ايديك: " .. tostring(LocalPlayer.UserId)
+    idLabel.TextSize = 18
+    idLabel.TextColor3 = settings.textColor
+    idLabel.TextXAlignment = Enum.TextXAlignment.Left
+    idLabel.Parent = infoTextContainer
+
+    local hackLabel = Instance.new("TextLabel")
+    hackLabel.Name = "HackLabel"
+    hackLabel.Size = UDim2.new(1, 0, 0, 20)
+    hackLabel.Position = UDim2.new(0, 0, 0, 60)
+    hackLabel.BackgroundTransparency = 1
+    hackLabel.Font = Enum.Font.GothamBold
+    hackLabel.Text = "الهاك: Luna Hack"  -- يمكنك تعديلها لتصبح ديناميكية
+    hackLabel.TextSize = 18
+    hackLabel.TextColor3 = settings.textColor
+    hackLabel.TextXAlignment = Enum.TextXAlignment.Left
+    hackLabel.Parent = infoTextContainer
+
+    local keyLabel = Instance.new("TextLabel")
+    keyLabel.Name = "KeyLabel"
+    keyLabel.Size = UDim2.new(1, 0, 0, 20)
+    keyLabel.Position = UDim2.new(0, 0, 0, 85)
+    keyLabel.BackgroundTransparency = 1
+    keyLabel.Font = Enum.Font.GothamBold
+    keyLabel.Text = "المفتاح: SecretKey"  -- يمكنك تعديلها حسب الحاجة
+    keyLabel.TextSize = 18
+    keyLabel.TextColor3 = settings.textColor
+    keyLabel.TextXAlignment = Enum.TextXAlignment.Left
+    keyLabel.Parent = infoTextContainer
+
+    -- زر قناة تليجرام مع أيقونة (يمكن استخدام setclipboard)
+    local telegramButton = Instance.new("TextButton")
+    telegramButton.Name = "TelegramButton"
+    telegramButton.Size = UDim2.new(0, 180, 0, 40)
+    telegramButton.Position = UDim2.new(0.5, -90, 1, -50)
+    telegramButton.BackgroundColor3 = settings.accentColor
+    telegramButton.Font = Enum.Font.GothamBold
+    telegramButton.Text = "قناة تليجرام"
+    telegramButton.TextSize = 18
+    telegramButton.TextColor3 = settings.textColor
+    telegramButton.Parent = infoFrame
+
+    local telegramButtonCorner = Instance.new("UICorner")
+    telegramButtonCorner.CornerRadius = UDim.new(0, 8)
+    telegramButtonCorner.Parent = telegramButton
+
+    telegramButton.MouseEnter:Connect(function()
+        TweenService:Create(telegramButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
     end)
+    telegramButton.MouseLeave:Connect(function()
+        TweenService:Create(telegramButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
+    end)
+
+    telegramButton.MouseButton1Click:Connect(function()
+        if setclipboard then
+            setclipboard(settings.telegramLink)
+            showNotification(parentGui, "تم نسخ رابط القناة!")
+        else
+            showNotification(parentGui, "غير متاح النسخ!")
+        end
+    end)
+
+    -------------------------------------------------
+    -- نهاية واجهة المعلومات
+    -------------------------------------------------
 
     return infoFrame
 end
@@ -596,7 +703,7 @@ local function createOptionPanel(parentGui)
     mainButton.Position = UDim2.new(0, 10, 0, 55)
     mainButton.BackgroundColor3 = settings.accentColor
     mainButton.Font = Enum.Font.GothamBold
-    mainButton.Text = "سكربتات"
+    mainButton.Text = "الواجهة"
     mainButton.TextSize = 18
     mainButton.TextColor3 = settings.textColor
     mainButton.Parent = optionPanel
@@ -629,7 +736,7 @@ end
 -- دالة إنشاء القائمة الدائرية (Circular Menu)
 ---------------------------------------------
 local function createCircularMenu()
-    local player = Players.LocalPlayer
+    local player = LocalPlayer
     local playerGui = player:WaitForChild("PlayerGui")
 
     if playerGui:FindFirstChild("CircularMenuGUI") then
@@ -699,7 +806,7 @@ function Luna:AddScript(scriptData)
 end
 
 ---------------------------------------------
--- يمكن إضافة المزيد من الوظائف إذا احتجت لذلك
+-- يمكن إضافة المزيد من الوظائف حسب الحاجة
 ---------------------------------------------
 
 return Luna
