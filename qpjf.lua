@@ -21,7 +21,7 @@ local settings = {
     openSound = "rbxassetid://6042053626",
     buttonSound = "rbxassetid://6026984224",
     warningSound = "rbxassetid://6042055798",
-    backgroundImage = "rbxassetid://13577851314", -- خلفية الواجهة الرئيسية
+    backgroundImage = "rbxassetid://13577851314", -- صورة خلفية الواجهة الرئيسية
     buttonColor = Color3.fromRGB(40, 40, 40),
     accentColor = Color3.fromRGB(0, 170, 100),
     textColor = Color3.fromRGB(255, 255, 255),
@@ -499,10 +499,11 @@ local function createInfoInterface(parentGui)
         parentGui.InfoInterface:Destroy()
     end
 
+    -- تصغير حجم نافذة المعلومات لتكون 500x400
     local infoFrame = Instance.new("Frame")
     infoFrame.Name = "InfoInterface"
-    infoFrame.Size = UDim2.new(0, 600, 0, 600)
-    infoFrame.Position = UDim2.new(0.5, -300, 0.5, -300)
+    infoFrame.Size = UDim2.new(0, 500, 0, 400)
+    infoFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
     infoFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     infoFrame.BackgroundTransparency = settings.transparency
     infoFrame.BorderSizePixel = 0
@@ -513,8 +514,8 @@ local function createInfoInterface(parentGui)
     infoFrame.Size = UDim2.new(0, 0, 0, 0)
     infoFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     TweenService:Create(infoFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-        Size = UDim2.new(0, 600, 0, 600),
-        Position = UDim2.new(0.5, -300, 0.5, -300),
+        Size = UDim2.new(0, 500, 0, 400),
+        Position = UDim2.new(0.5, -250, 0.5, -200),
         Rotation = 0
     }):Play()
 
@@ -525,7 +526,7 @@ local function createInfoInterface(parentGui)
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Name = "InfoTitle"
     titleLabel.Size = UDim2.new(0, 400, 0, 50)
-    titleLabel.Position = UDim2.new(0.5, -200, 0, 20)
+    titleLabel.Position = UDim2.new(0.5, -200, 0, 10)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Font = Enum.Font.GothamBold
     titleLabel.Text = "معلومات التطبيق"
@@ -533,11 +534,11 @@ local function createInfoInterface(parentGui)
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = infoFrame
 
-    -- إطار معلومات اللاعب (صورة صغيرة + بيانات)
+    -- إطار شفاف لمعلومات اللاعب
     local infoContainer = Instance.new("Frame")
     infoContainer.Name = "InfoContainer"
-    infoContainer.Size = UDim2.new(1, -40, 0, 120)
-    infoContainer.Position = UDim2.new(0, 20, 0, 80)
+    infoContainer.Size = UDim2.new(1, -40, 0, 100)
+    infoContainer.Position = UDim2.new(0, 20, 0, 70)
     infoContainer.BackgroundTransparency = 0.5
     infoContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     infoContainer.Parent = infoFrame
@@ -549,7 +550,7 @@ local function createInfoInterface(parentGui)
     local smallPlayerIcon = Instance.new("ImageLabel")
     smallPlayerIcon.Name = "SmallPlayerIcon"
     smallPlayerIcon.Size = UDim2.new(0, 60, 0, 60)
-    smallPlayerIcon.Position = UDim2.new(0, 10, 0, 30)
+    smallPlayerIcon.Position = UDim2.new(0, 10, 0, 20)
     smallPlayerIcon.BackgroundTransparency = 1
     smallPlayerIcon.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId .. "&w=150&h=150"
     smallPlayerIcon.Parent = infoContainer
@@ -568,7 +569,7 @@ local function createInfoInterface(parentGui)
     local nameLabel = Instance.new("TextLabel")
     nameLabel.Name = "NameLabel"
     nameLabel.Size = UDim2.new(1, 0, 0, 20)
-    nameLabel.Position = UDim2.new(0, 0, 0, 10)
+    nameLabel.Position = UDim2.new(0, 0, 0, 5)
     nameLabel.BackgroundTransparency = 1
     nameLabel.Font = Enum.Font.GothamBold
     nameLabel.Text = "اسمك: " .. LocalPlayer.DisplayName
@@ -580,7 +581,7 @@ local function createInfoInterface(parentGui)
     local idLabel = Instance.new("TextLabel")
     idLabel.Name = "IDLabel"
     idLabel.Size = UDim2.new(1, 0, 0, 20)
-    idLabel.Position = UDim2.new(0, 0, 0, 35)
+    idLabel.Position = UDim2.new(0, 0, 0, 30)
     idLabel.BackgroundTransparency = 1
     idLabel.Font = Enum.Font.GothamBold
     idLabel.Text = "ايديك: " .. tostring(LocalPlayer.UserId)
@@ -592,7 +593,7 @@ local function createInfoInterface(parentGui)
     local hackLabel = Instance.new("TextLabel")
     hackLabel.Name = "HackLabel"
     hackLabel.Size = UDim2.new(1, 0, 0, 20)
-    hackLabel.Position = UDim2.new(0, 0, 0, 60)
+    hackLabel.Position = UDim2.new(0, 0, 0, 55)
     hackLabel.BackgroundTransparency = 1
     hackLabel.Font = Enum.Font.GothamBold
     hackLabel.Text = "الهاك: Luna Hack"
@@ -604,7 +605,7 @@ local function createInfoInterface(parentGui)
     local keyLabel = Instance.new("TextLabel")
     keyLabel.Name = "KeyLabel"
     keyLabel.Size = UDim2.new(1, 0, 0, 20)
-    keyLabel.Position = UDim2.new(0, 0, 0, 85)
+    keyLabel.Position = UDim2.new(0, 0, 0, 80)
     keyLabel.BackgroundTransparency = 1
     keyLabel.Font = Enum.Font.GothamBold
     keyLabel.Text = "المفتاح: SecretKey"
@@ -616,8 +617,8 @@ local function createInfoInterface(parentGui)
     -- قسم معلومات اللاعبين في الماب
     local playersFrame = Instance.new("ScrollingFrame")
     playersFrame.Name = "PlayersInfoFrame"
-    playersFrame.Size = UDim2.new(1, -40, 0, 200)
-    playersFrame.Position = UDim2.new(0, 20, 0, 220)
+    playersFrame.Size = UDim2.new(1, -40, 0, 150)
+    playersFrame.Position = UDim2.new(0, 20, 0, 180)
     playersFrame.BackgroundTransparency = 0.5
     playersFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     playersFrame.BorderSizePixel = 0
@@ -667,11 +668,11 @@ local function createInfoInterface(parentGui)
         playTimeText.Position = UDim2.new(0.72, 0, 0, 0)
         playTimeText.BackgroundTransparency = 1
         playTimeText.Font = Enum.Font.GothamBold
-        local playTime = 0
+        local playTime = "N/A"
         if player.TimeJoined then
-            playTime = math.floor(os.time() - player.TimeJoined)
+            playTime = math.floor(os.time() - player.TimeJoined) .. " ثواني"
         end
-        playTimeText.Text = "وقت العب: " .. playTime .. " ثواني"
+        playTimeText.Text = "وقت العب: " .. playTime
         playTimeText.TextSize = 16
         playTimeText.TextColor3 = settings.textColor
         playTimeText.Parent = entry
@@ -728,34 +729,6 @@ local function createInfoInterface(parentGui)
         else
             showNotification(parentGui, "غير متاح النسخ!")
         end
-    end)
-
-    -- زر إغلاق نافذة المعلومات (X)
-    local infoCloseButton = Instance.new("TextButton")
-    infoCloseButton.Name = "InfoCloseButton"
-    infoCloseButton.Size = UDim2.new(0, 30, 0, 30)
-    infoCloseButton.Position = UDim2.new(1, -40, 0, 10)
-    infoCloseButton.BackgroundTransparency = 0.5
-    infoCloseButton.BackgroundColor3 = settings.buttonColor
-    infoCloseButton.Text = "X"
-    infoCloseButton.Font = Enum.Font.GothamBold
-    infoCloseButton.TextSize = 24
-    infoCloseButton.TextColor3 = settings.textColor
-    infoCloseButton.Parent = infoFrame
-
-    infoCloseButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = parentGui
-        btnSound:Play()
-        TweenService:Create(infoFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 0, 0, 0),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Rotation = 5
-        }):Play()
-        wait(0.5)
-        infoFrame:Destroy()
     end)
 
     return infoFrame
@@ -931,7 +904,7 @@ function Luna:AddScript(scriptData)
 end
 
 ---------------------------------------------
--- يمكن إضافة المزيد من الوظائف حسب الحاجة
+-- يمكن إضافة المزيد من الوظائف إذا احتجت لذلك
 ---------------------------------------------
 
 return Luna
