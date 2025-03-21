@@ -504,11 +504,7 @@ local function createInfoInterface(parentGui)
     infoContent.Position = UDim2.new(0.5, -275, 0, 100)
     infoContent.BackgroundTransparency = 1
     infoContent.Font = Enum.Font.Gotham
-    infoContent.Text = "سكربت ★ Reds ‏★/n/n
-سكربت فيه كل السكربتات التي تحتاجها/n
-يوفر سكربتات بأنواع كثيرة/n
-ويحتوي على خلفية وأصوات حلوة/n
-والسكربت يتحدث كل شهر/n"
+    infoContent.Text = "سكربت ★ Reds ‏★\n\nسكربت فيه كل السكربتات التي تحتاجها\nيوفر سكربتات بأنواع كثيرة\nويحتوي على خلفية وأصوات حلوة\nوالسكربت يتحدث كل شهر\n"
     infoContent.TextSize = 18
     infoContent.TextColor3 = settings.textColor
     infoContent.TextWrapped = true
