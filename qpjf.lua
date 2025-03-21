@@ -1,6 +1,7 @@
 ---------------------------------------------
 -- مكتبة Luna للواجهات الفخمة في Roblox
 -- تُتيح إضافة سكربتات خارجية وتشغيلها مع واجهة رئيسية مميزة
+-- تُحدّث نافذة المعلومات بيانات اللاعبين ديناميكيًا
 --
 -- طريقة الاستخدام:
 -- local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/YourRepo/YourScript.lua", true))()
@@ -211,282 +212,87 @@ local function showConfirmationDialog(parentGui, message, confirmCallback)
 end
 
 ---------------------------------------------
--- دالة إنشاء الواجهة الرئيسية (Main Interface)
+-- دالة إنشاء/تحديث معلومات اللاعبين في نافذة المعلومات
 ---------------------------------------------
-local function createMainInterface(parentGui)
-    local openSound = Instance.new("Sound")
-    openSound.SoundId = settings.openSound
-    openSound.Volume = 0.5
-    openSound.Parent = parentGui
-    openSound:Play()
+local function updatePlayersInfo(playersFrame)
+    playersFrame:ClearAllChildren()
+    local playersGrid = Instance.new("UIListLayout")
+    playersGrid.Padding = UDim.new(0, 5)
+    playersGrid.Parent = playersFrame
 
-    if parentGui:FindFirstChild("MainInterface") then
-        parentGui.MainInterface:Destroy()
-    end
+    for _, player in ipairs(Players:GetPlayers()) do
+        local entry = Instance.new("Frame")
+        entry.Name = "PlayerEntry_" .. player.Name
+        entry.Size = UDim2.new(1, -10, 0, 40)
+        entry.BackgroundTransparency = 0.3
+        entry.BackgroundColor3 = settings.buttonColor
+        entry.Parent = playersFrame
 
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainInterface"
-    mainFrame.Size = UDim2.new(0, 800, 0, 500)
-    mainFrame.Position = UDim2.new(0.5, -400, 0.5, -250)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    mainFrame.BackgroundTransparency = settings.transparency
-    mainFrame.BorderSizePixel = 0
-    mainFrame.ClipsDescendants = true
-    mainFrame.Parent = parentGui
+        local entryCorner = Instance.new("UICorner")
+        entryCorner.CornerRadius = UDim.new(0, 6)
+        entryCorner.Parent = entry
 
-    mainFrame.Rotation = -5
-    mainFrame.Size = UDim2.new(0, 0, 0, 0)
-    mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-        Size = UDim2.new(0, 800, 0, 500),
-        Position = UDim2.new(0.5, -400, 0.5, -250),
-        Rotation = 0
-    }):Play()
+        local nameText = Instance.new("TextLabel")
+        nameText.Name = "NameText"
+        nameText.Size = UDim2.new(0.4, 0, 1, 0)
+        nameText.BackgroundTransparency = 1
+        nameText.Font = Enum.Font.GothamBold
+        nameText.Text = "اسمه: " .. player.Name
+        nameText.TextSize = 16
+        nameText.TextColor3 = settings.textColor
+        nameText.Parent = entry
 
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = settings.cornerRadius
-    mainCorner.Parent = mainFrame
+        local idText = Instance.new("TextLabel")
+        idText.Name = "IDText"
+        idText.Size = UDim2.new(0.3, 0, 1, 0)
+        idText.Position = UDim2.new(0.41, 0, 0, 0)
+        idText.BackgroundTransparency = 1
+        idText.Font = Enum.Font.GothamBold
+        idText.Text = "ايديه: " .. tostring(player.UserId)
+        idText.TextSize = 16
+        idText.TextColor3 = settings.textColor
+        idText.Parent = entry
 
-    local backgroundImage = Instance.new("ImageLabel")
-    backgroundImage.Name = "BackgroundImage"
-    backgroundImage.Size = UDim2.new(1, 0, 1, 0)
-    backgroundImage.Position = UDim2.new(0, 0, 0, 0)
-    backgroundImage.BackgroundTransparency = 1
-    backgroundImage.Image = settings.backgroundImage
-    backgroundImage.ImageTransparency = 0.2
-    backgroundImage.ScaleType = Enum.ScaleType.Crop
-    backgroundImage.Parent = mainFrame
-
-    local gradient = Instance.new("UIGradient")
-    gradient.Rotation = 45
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 30, 30))
-    })
-    gradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.2),
-        NumberSequenceKeypoint.new(1, 0.8)
-    })
-    gradient.Parent = backgroundImage
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Name = "Title"
-    titleLabel.Size = UDim2.new(0, 400, 0, 50)
-    titleLabel.Position = UDim2.new(0.5, -200, 0, 20)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Text = "القائمة الرئيسية"
-    titleLabel.TextSize = 28
-    titleLabel.TextColor3 = settings.textColor
-    titleLabel.Parent = mainFrame
-
-    -------------------------------------------------
-    -- قسم عرض السكربتات الخارجية مع عداد للتنفيذ
-    -------------------------------------------------
-    local extScriptsFrame = Instance.new("ScrollingFrame")
-    extScriptsFrame.Name = "ExternalScriptsFrame"
-    extScriptsFrame.Size = UDim2.new(1, -60, 0, 250)
-    extScriptsFrame.Position = UDim2.new(0, 30, 0, 100)
-    extScriptsFrame.BackgroundTransparency = 1
-    extScriptsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    extScriptsFrame.ScrollBarThickness = 4
-    extScriptsFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-    extScriptsFrame.Parent = mainFrame
-
-    local grid = Instance.new("UIGridLayout")
-    grid.CellSize = UDim2.new(0, 200, 0, 240)
-    grid.CellPadding = UDim2.new(0, 10, 0, 10)
-    grid.Parent = extScriptsFrame
-
-    grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        extScriptsFrame.CanvasSize = UDim2.new(0, grid.AbsoluteContentSize.X, 0, grid.AbsoluteContentSize.Y)
-    end)
-
-    for _, scriptData in ipairs(externalScripts) do
-        local itemFrame = Instance.new("Frame")
-        itemFrame.Name = scriptData.name
-        itemFrame.Size = UDim2.new(0, 200, 0, 240)
-        itemFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        itemFrame.BackgroundTransparency = 0.7
-        itemFrame.Parent = extScriptsFrame
-
-        local itemCorner = Instance.new("UICorner")
-        itemCorner.CornerRadius = UDim.new(0, 10)
-        itemCorner.Parent = itemFrame
-
-        local scriptLabel = Instance.new("TextLabel")
-        scriptLabel.Name = "ScriptLabel"
-        scriptLabel.Size = UDim2.new(1, -20, 0, 120)
-        scriptLabel.Position = UDim2.new(0, 10, 0, 10)
-        scriptLabel.BackgroundTransparency = 1
-        scriptLabel.Font = Enum.Font.GothamBold
-        scriptLabel.Text = scriptData.name .. "\n" .. scriptData.description
-        scriptLabel.TextSize = 16
-        scriptLabel.TextColor3 = settings.textColor
-        scriptLabel.TextWrapped = true
-        scriptLabel.Parent = itemFrame
-
-        local counterLabel = Instance.new("TextLabel")
-        counterLabel.Name = "CounterLabel"
-        counterLabel.Size = UDim2.new(1, -20, 0, 20)
-        counterLabel.Position = UDim2.new(0, 10, 1, -30)
-        counterLabel.BackgroundTransparency = 1
-        counterLabel.Font = Enum.Font.GothamBold
-        local counterName = "ScriptCounter_" .. scriptData.name
-        local counterValue = workspace:FindFirstChild(counterName)
-        if not counterValue then
-            counterValue = Instance.new("NumberValue")
-            counterValue.Name = counterName
-            counterValue.Value = 0
-            counterValue.Parent = workspace
+        local playTimeText = Instance.new("TextLabel")
+        playTimeText.Name = "PlayTimeText"
+        playTimeText.Size = UDim2.new(0.3, 0, 1, 0)
+        playTimeText.Position = UDim2.new(0.72, 0, 0, 0)
+        playTimeText.BackgroundTransparency = 1
+        playTimeText.Font = Enum.Font.GothamBold
+        local playTime = "0 ثواني"
+        if player.TimeJoined then
+            playTime = math.floor(os.time() - player.TimeJoined) .. " ثواني"
         end
-        counterLabel.Text = "التنفيذ: " .. counterValue.Value
-        counterLabel.TextSize = 16
-        counterLabel.TextColor3 = settings.textColor
-        counterLabel.Parent = itemFrame
+        playTimeText.Text = "وقت العب: " .. playTime
+        playTimeText.TextSize = 16
+        playTimeText.TextColor3 = settings.textColor
+        playTimeText.Parent = entry
 
-        local viewButton = Instance.new("TextButton")
-        viewButton.Name = "ViewButton"
-        viewButton.Size = UDim2.new(0, 180, 0, 40)
-        viewButton.Position = UDim2.new(0, 10, 0, 130)
-        viewButton.BackgroundColor3 = settings.accentColor
-        viewButton.Font = Enum.Font.GothamBold
-        viewButton.Text = "مشاهدة"
-        viewButton.TextSize = 18
-        viewButton.TextColor3 = settings.textColor
-        viewButton.Parent = itemFrame
+        local teleportButton = Instance.new("TextButton")
+        teleportButton.Name = "TeleportButton"
+        teleportButton.Size = UDim2.new(0, 60, 1, 0)
+        teleportButton.Position = UDim2.new(0.98, -60, 0, 0)
+        teleportButton.BackgroundColor3 = settings.accentColor
+        teleportButton.Font = Enum.Font.GothamBold
+        teleportButton.Text = "تنقل"
+        teleportButton.TextSize = 16
+        teleportButton.TextColor3 = settings.textColor
+        teleportButton.Parent = entry
 
-        local viewButtonCorner = Instance.new("UICorner")
-        viewButtonCorner.CornerRadius = UDim.new(0, 8)
-        viewButtonCorner.Parent = viewButton
+        local teleportCorner = Instance.new("UICorner")
+        teleportCorner.CornerRadius = UDim.new(0, 6)
+        teleportCorner.Parent = teleportButton
 
-        viewButton.MouseEnter:Connect(function()
-            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
-        end)
-        viewButton.MouseLeave:Connect(function()
-            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
-        end)
-
-        viewButton.MouseButton1Click:Connect(function()
-            local btnSound = Instance.new("Sound")
-            btnSound.SoundId = settings.buttonSound
-            btnSound.Volume = 0.5
-            btnSound.Parent = parentGui
-            btnSound:Play()
-            TweenService:Create(viewButton, TweenInfo.new(0.2), {Size = UDim2.new(0, 190, 0, 45)}):Play()
-            wait(0.2)
-            TweenService:Create(viewButton, TweenInfo.new(0.2), {Size = UDim2.new(0, 180, 0, 40)}):Play()
-            showConfirmationDialog(parentGui, "هل أنت متأكد أنك تريد تشغيل " .. scriptData.name .. "؟", function()
-                loadstring(game:HttpGet(scriptData.url))()
-                local counterName = "ScriptCounter_" .. scriptData.name
-                local counterValue = workspace:FindFirstChild(counterName)
-                if not counterValue then
-                    counterValue = Instance.new("NumberValue")
-                    counterValue.Name = counterName
-                    counterValue.Value = 0
-                    counterValue.Parent = workspace
-                end
-                counterValue.Value = counterValue.Value + 1
-                counterLabel.Text = "التنفيذ: " .. counterValue.Value
-                showNotification(parentGui, "تم تشغيل " .. scriptData.name .. "!")
-            end)
+        teleportButton.MouseButton1Click:Connect(function()
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5)
+            end
         end)
     end
-
-    -------------------------------------------------
-    -- نهاية قسم السكربتات الخارجية
-    -------------------------------------------------
-
-    local closeButton = Instance.new("ImageButton")
-    closeButton.Name = "CloseButton"
-    closeButton.Size = UDim2.new(0, 30, 0, 30)
-    closeButton.Position = UDim2.new(1, -40, 0, 10)
-    closeButton.BackgroundTransparency = 0.5
-    closeButton.BackgroundColor3 = settings.buttonColor
-    closeButton.Text = "X"
-    closeButton.Font = Enum.Font.GothamBold
-    closeButton.TextSize = 24
-    closeButton.TextColor3 = settings.textColor
-    closeButton.Parent = mainFrame
-
-    closeButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = parentGui
-        btnSound:Play()
-        TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 0, 0, 0),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Rotation = 5
-        }):Play()
-        wait(0.5)
-        mainFrame:Destroy()
-    end)
-
-    local searchFrame = Instance.new("Frame")
-    searchFrame.Name = "SearchFrame"
-    searchFrame.Size = UDim2.new(0, 500, 0, 40)
-    searchFrame.Position = UDim2.new(0.5, -250, 0, 60)
-    searchFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    searchFrame.BackgroundTransparency = 0.5
-    searchFrame.Parent = mainFrame
-
-    local searchCorner = Instance.new("UICorner")
-    searchCorner.CornerRadius = UDim.new(0, 20)
-    searchCorner.Parent = searchFrame
-
-    local searchIcon = Instance.new("ImageLabel")
-    searchIcon.Name = "SearchIcon"
-    searchIcon.Size = UDim2.new(0, 20, 0, 20)
-    searchIcon.Position = UDim2.new(0, 15, 0.5, -10)
-    searchIcon.BackgroundTransparency = 1
-    searchIcon.Image = "rbxassetid://3605022185"
-    searchIcon.ImageColor3 = settings.textColor
-    searchIcon.Parent = searchFrame
-
-    local searchBox = Instance.new("TextBox")
-    searchBox.Name = "SearchBox"
-    searchBox.Size = UDim2.new(1, -50, 1, 0)
-    searchBox.Position = UDim2.new(0, 45, 0, 0)
-    searchBox.BackgroundTransparency = 1
-    searchBox.Font = Enum.Font.Gotham
-    searchBox.PlaceholderText = "بحث..."
-    searchBox.Text = ""
-    searchBox.TextSize = 18
-    searchBox.TextColor3 = settings.textColor
-    searchBox.TextXAlignment = Enum.TextXAlignment.Left
-    searchBox.Parent = searchFrame
-
-    local playerIcon = Instance.new("ImageLabel")
-    playerIcon.Name = "PlayerIcon"
-    playerIcon.Size = UDim2.new(0, 50, 0, 50)
-    playerIcon.Position = UDim2.new(0, 30, 0, 110)
-    playerIcon.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    playerIcon.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId .. "&w=150&h=150"
-    playerIcon.Parent = mainFrame
-
-    local playerIconCorner = Instance.new("UICorner")
-    playerIconCorner.CornerRadius = UDim.new(0, 25)
-    playerIconCorner.Parent = playerIcon
-
-    local playerName = Instance.new("TextLabel")
-    playerName.Name = "PlayerName"
-    playerName.Size = UDim2.new(0, 200, 0, 30)
-    playerName.Position = UDim2.new(0, 85, 0, 115)
-    playerName.BackgroundTransparency = 1
-    playerName.Font = Enum.Font.GothamSemibold
-    playerName.Text = LocalPlayer.DisplayName
-    playerName.TextSize = 18
-    playerName.TextColor3 = settings.textColor
-    playerName.TextXAlignment = Enum.TextXAlignment.Left
-    playerName.Parent = mainFrame
-
-    return mainFrame
 end
 
 ---------------------------------------------
--- دالة إنشاء واجهة المعلومات (Info Interface)
+-- دالة إنشاء نافذة المعلومات (Info Interface)
 ---------------------------------------------
 local function createInfoInterface(parentGui)
     local openSound = Instance.new("Sound")
@@ -499,7 +305,6 @@ local function createInfoInterface(parentGui)
         parentGui.InfoInterface:Destroy()
     end
 
-    -- تصغير حجم نافذة المعلومات لتكون 500x400
     local infoFrame = Instance.new("Frame")
     infoFrame.Name = "InfoInterface"
     infoFrame.Size = UDim2.new(0, 500, 0, 400)
@@ -534,7 +339,7 @@ local function createInfoInterface(parentGui)
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = infoFrame
 
-    -- إطار شفاف لمعلومات اللاعب
+    -- إطار شفاف لمعلومات اللاعب الشخصية
     local infoContainer = Instance.new("Frame")
     infoContainer.Name = "InfoContainer"
     infoContainer.Size = UDim2.new(1, -40, 0, 100)
@@ -581,7 +386,7 @@ local function createInfoInterface(parentGui)
     local idLabel = Instance.new("TextLabel")
     idLabel.Name = "IDLabel"
     idLabel.Size = UDim2.new(1, 0, 0, 20)
-    idLabel.Position = UDim2.new(0, 0, 0, 30)
+    idLabel.Position = UDim2.new(0, 0, 0, 25)
     idLabel.BackgroundTransparency = 1
     idLabel.Font = Enum.Font.GothamBold
     idLabel.Text = "ايديك: " .. tostring(LocalPlayer.UserId)
@@ -593,7 +398,7 @@ local function createInfoInterface(parentGui)
     local hackLabel = Instance.new("TextLabel")
     hackLabel.Name = "HackLabel"
     hackLabel.Size = UDim2.new(1, 0, 0, 20)
-    hackLabel.Position = UDim2.new(0, 0, 0, 55)
+    hackLabel.Position = UDim2.new(0, 0, 0, 45)
     hackLabel.BackgroundTransparency = 1
     hackLabel.Font = Enum.Font.GothamBold
     hackLabel.Text = "الهاك: Luna Hack"
@@ -605,7 +410,7 @@ local function createInfoInterface(parentGui)
     local keyLabel = Instance.new("TextLabel")
     keyLabel.Name = "KeyLabel"
     keyLabel.Size = UDim2.new(1, 0, 0, 20)
-    keyLabel.Position = UDim2.new(0, 0, 0, 80)
+    keyLabel.Position = UDim2.new(0, 0, 0, 65)
     keyLabel.BackgroundTransparency = 1
     keyLabel.Font = Enum.Font.GothamBold
     keyLabel.Text = "المفتاح: SecretKey"
@@ -614,7 +419,7 @@ local function createInfoInterface(parentGui)
     keyLabel.TextXAlignment = Enum.TextXAlignment.Left
     keyLabel.Parent = infoTextContainer
 
-    -- قسم معلومات اللاعبين في الماب
+    -- قسم معلومات اللاعبين في الماب (سيُحدث تلقائيًا)
     local playersFrame = Instance.new("ScrollingFrame")
     playersFrame.Name = "PlayersInfoFrame"
     playersFrame.Size = UDim2.new(1, -40, 0, 150)
@@ -629,75 +434,95 @@ local function createInfoInterface(parentGui)
     playersGrid.Padding = UDim.new(0, 5)
     playersGrid.Parent = playersFrame
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        local entry = Instance.new("Frame")
-        entry.Name = "PlayerEntry_" .. player.Name
-        entry.Size = UDim2.new(1, -10, 0, 40)
-        entry.BackgroundTransparency = 0.3
-        entry.BackgroundColor3 = settings.buttonColor
-        entry.Parent = playersFrame
-
-        local entryCorner = Instance.new("UICorner")
-        entryCorner.CornerRadius = UDim.new(0, 6)
-        entryCorner.Parent = entry
-
-        local nameText = Instance.new("TextLabel")
-        nameText.Name = "NameText"
-        nameText.Size = UDim2.new(0.4, 0, 1, 0)
-        nameText.BackgroundTransparency = 1
-        nameText.Font = Enum.Font.GothamBold
-        nameText.Text = "اسمه: " .. player.Name
-        nameText.TextSize = 16
-        nameText.TextColor3 = settings.textColor
-        nameText.Parent = entry
-
-        local idText = Instance.new("TextLabel")
-        idText.Name = "IDText"
-        idText.Size = UDim2.new(0.3, 0, 1, 0)
-        idText.Position = UDim2.new(0.41, 0, 0, 0)
-        idText.BackgroundTransparency = 1
-        idText.Font = Enum.Font.GothamBold
-        idText.Text = "ايديه: " .. tostring(player.UserId)
-        idText.TextSize = 16
-        idText.TextColor3 = settings.textColor
-        idText.Parent = entry
-
-        local playTimeText = Instance.new("TextLabel")
-        playTimeText.Name = "PlayTimeText"
-        playTimeText.Size = UDim2.new(0.3, 0, 1, 0)
-        playTimeText.Position = UDim2.new(0.72, 0, 0, 0)
-        playTimeText.BackgroundTransparency = 1
-        playTimeText.Font = Enum.Font.GothamBold
-        local playTime = "N/A"
-        if player.TimeJoined then
-            playTime = math.floor(os.time() - player.TimeJoined) .. " ثواني"
-        end
-        playTimeText.Text = "وقت العب: " .. playTime
-        playTimeText.TextSize = 16
-        playTimeText.TextColor3 = settings.textColor
-        playTimeText.Parent = entry
-
-        local teleportButton = Instance.new("TextButton")
-        teleportButton.Name = "TeleportButton"
-        teleportButton.Size = UDim2.new(0, 60, 1, 0)
-        teleportButton.Position = UDim2.new(0.98, -60, 0, 0)
-        teleportButton.BackgroundColor3 = settings.accentColor
-        teleportButton.Font = Enum.Font.GothamBold
-        teleportButton.Text = "تنقل"
-        teleportButton.TextSize = 16
-        teleportButton.TextColor3 = settings.textColor
-        teleportButton.Parent = entry
-
-        local teleportCorner = Instance.new("UICorner")
-        teleportCorner.CornerRadius = UDim.new(0, 6)
-        teleportCorner.Parent = teleportButton
-
-        teleportButton.MouseButton1Click:Connect(function()
-            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5)
-            end
-        end)
+    local function refreshPlayers()
+        updatePlayersInfo(playersFrame)
     end
+
+    local function updatePlayersInfo(frame)
+        frame:ClearAllChildren()
+        local layout = Instance.new("UIListLayout")
+        layout.Padding = UDim.new(0, 5)
+        layout.Parent = frame
+        for _, player in ipairs(Players:GetPlayers()) do
+            local entry = Instance.new("Frame")
+            entry.Name = "PlayerEntry_" .. player.Name
+            entry.Size = UDim2.new(1, -10, 0, 40)
+            entry.BackgroundTransparency = 0.3
+            entry.BackgroundColor3 = settings.buttonColor
+            entry.Parent = frame
+
+            local entryCorner = Instance.new("UICorner")
+            entryCorner.CornerRadius = UDim.new(0, 6)
+            entryCorner.Parent = entry
+
+            local nameText = Instance.new("TextLabel")
+            nameText.Name = "NameText"
+            nameText.Size = UDim2.new(0.4, 0, 1, 0)
+            nameText.BackgroundTransparency = 1
+            nameText.Font = Enum.Font.GothamBold
+            nameText.Text = "اسمه: " .. player.Name
+            nameText.TextSize = 16
+            nameText.TextColor3 = settings.textColor
+            nameText.Parent = entry
+
+            local idText = Instance.new("TextLabel")
+            idText.Name = "IDText"
+            idText.Size = UDim2.new(0.3, 0, 1, 0)
+            idText.Position = UDim2.new(0.41, 0, 0, 0)
+            idText.BackgroundTransparency = 1
+            idText.Font = Enum.Font.GothamBold
+            idText.Text = "ايديه: " .. tostring(player.UserId)
+            idText.TextSize = 16
+            idText.TextColor3 = settings.textColor
+            idText.Parent = entry
+
+            local playTimeText = Instance.new("TextLabel")
+            playTimeText.Name = "PlayTimeText"
+            playTimeText.Size = UDim2.new(0.3, 0, 1, 0)
+            playTimeText.Position = UDim2.new(0.72, 0, 0, 0)
+            playTimeText.BackgroundTransparency = 1
+            playTimeText.Font = Enum.Font.GothamBold
+            local playTime = "0 ثواني"
+            if player.TimeJoined then
+                playTime = math.floor(os.time() - player.TimeJoined) .. " ثواني"
+            end
+            playTimeText.Text = "وقت العب: " .. playTime
+            playTimeText.TextSize = 16
+            playTimeText.TextColor3 = settings.textColor
+            playTimeText.Parent = entry
+
+            local teleportButton = Instance.new("TextButton")
+            teleportButton.Name = "TeleportButton"
+            teleportButton.Size = UDim2.new(0, 60, 1, 0)
+            teleportButton.Position = UDim2.new(0.98, -60, 0, 0)
+            teleportButton.BackgroundColor3 = settings.accentColor
+            teleportButton.Font = Enum.Font.GothamBold
+            teleportButton.Text = "تنقل"
+            teleportButton.TextSize = 16
+            teleportButton.TextColor3 = settings.textColor
+            teleportButton.Parent = entry
+
+            local teleportCorner = Instance.new("UICorner")
+            teleportCorner.CornerRadius = UDim.new(0, 6)
+            teleportCorner.Parent = teleportButton
+
+            teleportButton.MouseButton1Click:Connect(function()
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5)
+                end
+            end)
+        end
+    end
+
+    refreshPlayers()
+
+    -- تحديث دوري لكل 5 ثواني
+    spawn(function()
+        while infoFrame.Parent do
+            updatePlayersInfo(playersFrame)
+            wait(5)
+        end
+    end)
 
     -- زر قناة تليجرام
     local telegramButton = Instance.new("TextButton")
@@ -729,6 +554,34 @@ local function createInfoInterface(parentGui)
         else
             showNotification(parentGui, "غير متاح النسخ!")
         end
+    end)
+
+    -- زر إغلاق نافذة المعلومات (X)
+    local infoCloseButton = Instance.new("TextButton")
+    infoCloseButton.Name = "InfoCloseButton"
+    infoCloseButton.Size = UDim2.new(0, 30, 0, 30)
+    infoCloseButton.Position = UDim2.new(1, -40, 0, 10)
+    infoCloseButton.BackgroundTransparency = 0.5
+    infoCloseButton.BackgroundColor3 = settings.buttonColor
+    infoCloseButton.Text = "X"
+    infoCloseButton.Font = Enum.Font.GothamBold
+    infoCloseButton.TextSize = 24
+    infoCloseButton.TextColor3 = settings.textColor
+    infoCloseButton.Parent = infoFrame
+
+    infoCloseButton.MouseButton1Click:Connect(function()
+        local btnSound = Instance.new("Sound")
+        btnSound.SoundId = settings.buttonSound
+        btnSound.Volume = 0.5
+        btnSound.Parent = parentGui
+        btnSound:Play()
+        TweenService:Create(infoFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Rotation = 5
+        }):Play()
+        wait(0.5)
+        infoFrame:Destroy()
     end)
 
     return infoFrame
