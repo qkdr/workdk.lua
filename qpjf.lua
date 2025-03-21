@@ -1,6 +1,6 @@
 ---------------------------------------------
 -- مكتبة Luna للواجهات الفخمة في Roblox
--- تُتيح إضافة سكربتات خارجية وتشغيلها مع واجهة رئيسية مميزة
+-- تُتيح إضافة سكربتات خارجية وتشغيلها مع واجهة رئيسية فخمة
 --
 -- طريقة الاستخدام:
 -- local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/qkdr/workdk.lua/refs/heads/main/qpjf.lua", true))()
@@ -21,7 +21,7 @@ local settings = {
     openSound = "rbxassetid://6042053626",
     buttonSound = "rbxassetid://6026984224",
     warningSound = "rbxassetid://6042055798",
-    backgroundImage = "rbxassetid://13577851314", -- خلفية الواجهة الرئيسية
+    backgroundImage = "rbxassetid://13577851314", -- صورة خلفية الواجهة الرئيسية
     buttonColor = Color3.fromRGB(40, 40, 40),
     accentColor = Color3.fromRGB(0, 170, 100),
     textColor = Color3.fromRGB(255, 255, 255),
@@ -36,7 +36,7 @@ local settings = {
 local externalScripts = {}
 
 ---------------------------------------------
--- خدمات Roblox
+-- خدمات Roblox وأدوات
 ---------------------------------------------
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -281,7 +281,7 @@ local function createMainInterface(parentGui)
     titleLabel.Parent = mainFrame
 
     -------------------------------------------------
-    -- قسم عرض السكربتات الخارجية كنصوص مع زر "مشاهدة" + عداد للتنفيذ
+    -- قسم عرض السكربتات الخارجية (مع عداد للتنفيذ)
     -------------------------------------------------
     local extScriptsFrame = Instance.new("ScrollingFrame")
     extScriptsFrame.Name = "ExternalScriptsFrame"
@@ -326,14 +326,21 @@ local function createMainInterface(parentGui)
         scriptLabel.TextWrapped = true
         scriptLabel.Parent = itemFrame
 
-        -- عداد يظهر عدد مرات تنفيذ السكربت (يُخزن في Workspace)
         local counterLabel = Instance.new("TextLabel")
         counterLabel.Name = "CounterLabel"
         counterLabel.Size = UDim2.new(1, -20, 0, 20)
         counterLabel.Position = UDim2.new(0, 10, 1, -30)
         counterLabel.BackgroundTransparency = 1
         counterLabel.Font = Enum.Font.GothamBold
-        counterLabel.Text = "التنفيذ: 0"
+        local counterName = "ScriptCounter_" .. scriptData.name
+        local counterValue = workspace:FindFirstChild(counterName)
+        if not counterValue then
+            counterValue = Instance.new("NumberValue")
+            counterValue.Name = counterName
+            counterValue.Value = 0
+            counterValue.Parent = workspace
+        end
+        counterLabel.Text = "التنفيذ: " .. counterValue.Value
         counterLabel.TextSize = 16
         counterLabel.TextColor3 = settings.textColor
         counterLabel.Parent = itemFrame
@@ -371,7 +378,6 @@ local function createMainInterface(parentGui)
             TweenService:Create(viewButton, TweenInfo.new(0.2), {Size = UDim2.new(0, 180, 0, 40)}):Play()
             showConfirmationDialog(parentGui, "هل أنت متأكد أنك تريد تشغيل " .. scriptData.name .. "؟", function()
                 loadstring(game:HttpGet(scriptData.url))()
-                -- تحديث العداد (يُخزن في Workspace كـ NumberValue)
                 local counterName = "ScriptCounter_" .. scriptData.name
                 local counterValue = workspace:FindFirstChild(counterName)
                 if not counterValue then
@@ -396,7 +402,12 @@ local function createMainInterface(parentGui)
     closeButton.Size = UDim2.new(0, 30, 0, 30)
     closeButton.Position = UDim2.new(1, -40, 0, 10)
     closeButton.BackgroundTransparency = 1
-    closeButton.Image = "rbxassetid://7072725342"
+    -- استخدام زر نصي للاغلاق "X"
+    closeButton.Image = ""
+    closeButton.Text = "X"
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.TextSize = 24
+    closeButton.TextColor3 = settings.textColor
     closeButton.Parent = mainFrame
 
     closeButton.MouseButton1Click:Connect(function()
@@ -491,8 +502,8 @@ local function createInfoInterface(parentGui)
 
     local infoFrame = Instance.new("Frame")
     infoFrame.Name = "InfoInterface"
-    infoFrame.Size = UDim2.new(0, 600, 0, 400)
-    infoFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
+    infoFrame.Size = UDim2.new(0, 600, 0, 600)
+    infoFrame.Position = UDim2.new(0.5, -300, 0.5, -300)
     infoFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     infoFrame.BackgroundTransparency = settings.transparency
     infoFrame.BorderSizePixel = 0
@@ -503,8 +514,8 @@ local function createInfoInterface(parentGui)
     infoFrame.Size = UDim2.new(0, 0, 0, 0)
     infoFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     TweenService:Create(infoFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-        Size = UDim2.new(0, 600, 0, 400),
-        Position = UDim2.new(0.5, -300, 0.5, -200),
+        Size = UDim2.new(0, 600, 0, 600),
+        Position = UDim2.new(0.5, -300, 0.5, -300),
         Rotation = 0
     }):Play()
 
@@ -523,7 +534,7 @@ local function createInfoInterface(parentGui)
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = infoFrame
 
-    -- إطار شفاف يحتوي على صورة اللاعب ومعلوماته
+    -- الإطار الشفاف لمعلومات اللاعب
     local infoContainer = Instance.new("Frame")
     infoContainer.Name = "InfoContainer"
     infoContainer.Size = UDim2.new(1, -40, 0, 120)
@@ -536,7 +547,6 @@ local function createInfoInterface(parentGui)
     containerCorner.CornerRadius = UDim.new(0, 8)
     containerCorner.Parent = infoContainer
 
-    -- صورة اللاعب صغيرة على اليسار
     local smallPlayerIcon = Instance.new("ImageLabel")
     smallPlayerIcon.Name = "SmallPlayerIcon"
     smallPlayerIcon.Size = UDim2.new(0, 60, 0, 60)
@@ -549,7 +559,6 @@ local function createInfoInterface(parentGui)
     smallIconCorner.CornerRadius = UDim.new(0, 30)
     smallIconCorner.Parent = smallPlayerIcon
 
-    -- إطار يحتوي على المعلومات النصية
     local infoTextContainer = Instance.new("Frame")
     infoTextContainer.Name = "InfoTextContainer"
     infoTextContainer.Size = UDim2.new(1, -80, 1, 0)
@@ -587,7 +596,7 @@ local function createInfoInterface(parentGui)
     hackLabel.Position = UDim2.new(0, 0, 0, 60)
     hackLabel.BackgroundTransparency = 1
     hackLabel.Font = Enum.Font.GothamBold
-    hackLabel.Text = "الهاك: Luna Hack"  -- يمكنك تعديلها لتصبح ديناميكية
+    hackLabel.Text = "الهاك: Luna Hack"
     hackLabel.TextSize = 18
     hackLabel.TextColor3 = settings.textColor
     hackLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -599,13 +608,97 @@ local function createInfoInterface(parentGui)
     keyLabel.Position = UDim2.new(0, 0, 0, 85)
     keyLabel.BackgroundTransparency = 1
     keyLabel.Font = Enum.Font.GothamBold
-    keyLabel.Text = "المفتاح: SecretKey"  -- يمكنك تعديلها حسب الحاجة
+    keyLabel.Text = "المفتاح: SecretKey"
     keyLabel.TextSize = 18
     keyLabel.TextColor3 = settings.textColor
     keyLabel.TextXAlignment = Enum.TextXAlignment.Left
     keyLabel.Parent = infoTextContainer
 
-    -- زر قناة تليجرام مع أيقونة (يمكن استخدام setclipboard)
+    -- قسم معلومات اللاعبين في الماب
+    local playersFrame = Instance.new("ScrollingFrame")
+    playersFrame.Name = "PlayersInfoFrame"
+    playersFrame.Size = UDim2.new(1, -40, 0, 200)
+    playersFrame.Position = UDim2.new(0, 20, 0, 220)
+    playersFrame.BackgroundTransparency = 0.5
+    playersFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    playersFrame.BorderSizePixel = 0
+    playersFrame.ScrollBarThickness = 4
+    playersFrame.Parent = infoFrame
+
+    local playersGrid = Instance.new("UIListLayout")
+    playersGrid.Padding = UDim.new(0, 5)
+    playersGrid.Parent = playersFrame
+
+    -- لكل لاعب في اللعبة (يمكن تعديل لاستثناء المحلي)
+    for _, player in ipairs(Players:GetPlayers()) do
+        local entry = Instance.new("Frame")
+        entry.Name = "PlayerEntry_" .. player.Name
+        entry.Size = UDim2.new(1, -10, 0, 40)
+        entry.BackgroundTransparency = 0.3
+        entry.BackgroundColor3 = settings.buttonColor
+        entry.Parent = playersFrame
+
+        local entryCorner = Instance.new("UICorner")
+        entryCorner.CornerRadius = UDim.new(0, 6)
+        entryCorner.Parent = entry
+
+        local nameText = Instance.new("TextLabel")
+        nameText.Name = "NameText"
+        nameText.Size = UDim2.new(0.4, 0, 1, 0)
+        nameText.BackgroundTransparency = 1
+        nameText.Font = Enum.Font.GothamBold
+        nameText.Text = "اسمه: " .. player.Name
+        nameText.TextSize = 16
+        nameText.TextColor3 = settings.textColor
+        nameText.Parent = entry
+
+        local idText = Instance.new("TextLabel")
+        idText.Name = "IDText"
+        idText.Size = UDim2.new(0.3, 0, 1, 0)
+        idText.Position = UDim2.new(0.41, 0, 0, 0)
+        idText.BackgroundTransparency = 1
+        idText.Font = Enum.Font.GothamBold
+        idText.Text = "ايديه: " .. tostring(player.UserId)
+        idText.TextSize = 16
+        idText.TextColor3 = settings.textColor
+        idText.Parent = entry
+
+        local playTimeText = Instance.new("TextLabel")
+        playTimeText.Name = "PlayTimeText"
+        playTimeText.Size = UDim2.new(0.3, 0, 1, 0)
+        playTimeText.Position = UDim2.new(0.72, 0, 0, 0)
+        playTimeText.BackgroundTransparency = 1
+        playTimeText.Font = Enum.Font.GothamBold
+        -- حساب مدة اللعب منذ انضمام اللاعب
+        local playTime = math.floor(os.time() - player.TimeJoined)
+        playTimeText.Text = "وقت العب: " .. playTime .. " ثواني"
+        playTimeText.TextSize = 16
+        playTimeText.TextColor3 = settings.textColor
+        playTimeText.Parent = entry
+
+        local teleportButton = Instance.new("TextButton")
+        teleportButton.Name = "TeleportButton"
+        teleportButton.Size = UDim2.new(0, 60, 1, 0)
+        teleportButton.Position = UDim2.new(0.98, -60, 0, 0)
+        teleportButton.BackgroundColor3 = settings.accentColor
+        teleportButton.Font = Enum.Font.GothamBold
+        teleportButton.Text = "تنقل"
+        teleportButton.TextSize = 16
+        teleportButton.TextColor3 = settings.textColor
+        teleportButton.Parent = entry
+
+        local teleportCorner = Instance.new("UICorner")
+        teleportCorner.CornerRadius = UDim.new(0, 6)
+        teleportCorner.Parent = teleportButton
+
+        teleportButton.MouseButton1Click:Connect(function()
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5)
+            end
+        end)
+    end
+
+    -- زر قناة تليجرام
     local telegramButton = Instance.new("TextButton")
     telegramButton.Name = "TelegramButton"
     telegramButton.Size = UDim2.new(0, 180, 0, 40)
@@ -640,6 +733,34 @@ local function createInfoInterface(parentGui)
     -------------------------------------------------
     -- نهاية واجهة المعلومات
     -------------------------------------------------
+
+    -- زر اغلاق Info Interface (يظهر على شكل X)
+    local infoCloseButton = Instance.new("TextButton")
+    infoCloseButton.Name = "InfoCloseButton"
+    infoCloseButton.Size = UDim2.new(0, 30, 0, 30)
+    infoCloseButton.Position = UDim2.new(1, -40, 0, 10)
+    infoCloseButton.BackgroundTransparency = 0.5
+    infoCloseButton.BackgroundColor3 = settings.buttonColor
+    infoCloseButton.Text = "X"
+    infoCloseButton.Font = Enum.Font.GothamBold
+    infoCloseButton.TextSize = 24
+    infoCloseButton.TextColor3 = settings.textColor
+    infoCloseButton.Parent = infoFrame
+
+    infoCloseButton.MouseButton1Click:Connect(function()
+        local btnSound = Instance.new("Sound")
+        btnSound.SoundId = settings.buttonSound
+        btnSound.Volume = 0.5
+        btnSound.Parent = parentGui
+        btnSound:Play()
+        TweenService:Create(infoFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Rotation = 5
+        }):Play()
+        wait(0.5)
+        infoFrame:Destroy()
+    end)
 
     return infoFrame
 end
@@ -806,7 +927,7 @@ function Luna:AddScript(scriptData)
 end
 
 ---------------------------------------------
--- يمكن إضافة المزيد من الوظائف حسب الحاجة
+-- يمكن إضافة المزيد من الوظائف إذا احتجت لذلك
 ---------------------------------------------
 
 return Luna
