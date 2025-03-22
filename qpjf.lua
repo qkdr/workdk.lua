@@ -2,33 +2,34 @@
 -- مكتبة Luna للواجهات الفخمة في Roblox
 -- تُتيح إضافة مجلدات تحتوي على سكربتات خارجية وتشغيلها عبر واجهة ثنائية المستوى.
 -- حجم الواجهة الرئيسية (MainInterface) ونافذة المعلومات (InfoInterface) هو 500×400.
--- كل مجلد يظهر كزر شفاف عريض مع تأثير ضوئي (Glow) يحتوي على اسم المجلد ووصفه، 
--- بالإضافة إلى عداد يظهر عدد مرات دخول المستخدم للمجلد.
--- تمت إضافة زر بحث لتصفية المجلدات، وزر إغلاق (X) في الواجهة.
+-- كل مجلد يظهر كزر شفاف عريض (450×60) مع تأثير ضوئي متحرك (Glow) وبداخله:
+--   - اسم المجلد (FolderNameLabel)
+--   - وصف المجلد (FolderDescLabel)
+--   - علامة "آخر تعديل" (LastModifiedLabel) تُحدّث عند الدخول على المجلد.
+-- كما يظهر بجانب المجلد عداد (CounterLabel) يُسجل عدد مرات الدخول.
+-- توجد أيضاً شاشة بحث لتصفية المجلدات، وزر إغلاق (X) في الواجهة.
 -- الزر الدائري (CircularButton) قابل للسحب بسلاسة.
 ---------------------------------------------
 
 local Luna = {}
 
 ---------------------------------------------
--- إعدادات عامة قابلة للتعديل
+-- (القيم الثابتة مدمجة داخل الكود)
 ---------------------------------------------
-local settings = {
-    openSound = "rbxassetid://6042053626",
-    buttonSound = "rbxassetid://6026984224",
-    warningSound = "rbxassetid://6042055798",
-    backgroundImage = "rbxassetid://13577851314", -- صورة خلفية الواجهة
-    buttonColor = Color3.fromRGB(40, 40, 40),
-    accentColor = Color3.fromRGB(0, 170, 100),
-    textColor = Color3.fromRGB(255, 255, 255),
-    cornerRadius = UDim.new(0, 12),
-    transparency = 0.2,
-    telegramLink = "https://t.me/YourChannelLink"
-}
+local openSoundId = "rbxassetid://6042053626"
+local buttonSoundId = "rbxassetid://6026984224"
+local warningSoundId = "rbxassetid://6042055798"
+local backgroundImageId = "rbxassetid://13577851314"
+local buttonColor = Color3.fromRGB(40, 40, 40)
+local accentColor = Color3.fromRGB(0, 170, 100)
+local textColor = Color3.fromRGB(255, 255, 255)
+local cornerRadius = UDim.new(0, 12)
+local transparencyVal = 0.2
+local telegramLink = "https://t.me/YourChannelLink"
 
 ---------------------------------------------
--- بيانات المجلدات الخارجية (كل مجلد يحتوي على قائمة سكربتات)
--- يُمكن تمرير folderDescription كحقل اختياري
+-- بيانات المجلدات الخارجية
+-- كل مجلد يحتوي على folderName, folderDescription (اختياري) و scripts (قائمة السكربتات)
 ---------------------------------------------
 local externalFolders = {}
 
@@ -41,14 +42,14 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 ---------------------------------------------
--- دالة عرض إشعار أنيق على الشاشة
+-- دالة عرض إشعار
 ---------------------------------------------
 local function showNotification(parentGui, message)
     local notification = Instance.new("Frame")
     notification.Name = "Notification"
     notification.Size = UDim2.new(0, 300, 0, 50)
     notification.Position = UDim2.new(0.5, -150, 0, -60)
-    notification.BackgroundColor3 = settings.accentColor
+    notification.BackgroundColor3 = accentColor
     notification.BackgroundTransparency = 0.3
     notification.BorderSizePixel = 0
     notification.Parent = parentGui
@@ -66,7 +67,7 @@ local function showNotification(parentGui, message)
     notifText.Font = Enum.Font.GothamBold
     notifText.Text = message
     notifText.TextSize = 18
-    notifText.TextColor3 = settings.textColor
+    notifText.TextColor3 = textColor
     notifText.Parent = notification
     notifText.ZIndex = 10
 
@@ -86,11 +87,11 @@ local function showNotification(parentGui, message)
 end
 
 ---------------------------------------------
--- دالة إنشاء مربع التأكيد
+-- دالة مربع التأكيد
 ---------------------------------------------
 local function showConfirmationDialog(parentGui, message, confirmCallback)
     local warningSound = Instance.new("Sound")
-    warningSound.SoundId = settings.warningSound
+    warningSound.SoundId = warningSoundId
     warningSound.Volume = 0.5
     warningSound.Parent = parentGui
     warningSound:Play()
@@ -99,7 +100,7 @@ local function showConfirmationDialog(parentGui, message, confirmCallback)
     confirmationFrame.Name = "ConfirmationDialog"
     confirmationFrame.Size = UDim2.new(0, 400, 0, 200)
     confirmationFrame.Position = UDim2.new(0.5, -200, 0.5, -100)
-    confirmationFrame.BackgroundColor3 = settings.buttonColor
+    confirmationFrame.BackgroundColor3 = buttonColor
     confirmationFrame.BackgroundTransparency = 0.1
     confirmationFrame.BorderSizePixel = 0
     confirmationFrame.Parent = parentGui
@@ -113,7 +114,7 @@ local function showConfirmationDialog(parentGui, message, confirmCallback)
     }):Play()
 
     local confirmCorner = Instance.new("UICorner")
-    confirmCorner.CornerRadius = settings.cornerRadius
+    confirmCorner.CornerRadius = cornerRadius
     confirmCorner.Parent = confirmationFrame
 
     local warningIcon = Instance.new("ImageLabel")
@@ -134,7 +135,7 @@ local function showConfirmationDialog(parentGui, message, confirmCallback)
     confirmationText.Font = Enum.Font.GothamMedium
     confirmationText.Text = message
     confirmationText.TextSize = 16
-    confirmationText.TextColor3 = settings.textColor
+    confirmationText.TextColor3 = textColor
     confirmationText.TextWrapped = true
     confirmationText.Parent = confirmationFrame
     confirmationText.ZIndex = 10
@@ -143,16 +144,16 @@ local function showConfirmationDialog(parentGui, message, confirmCallback)
     confirmButton.Name = "ConfirmButton"
     confirmButton.Size = UDim2.new(0, 120, 0, 40)
     confirmButton.Position = UDim2.new(0.5, -130, 0, 140)
-    confirmButton.BackgroundColor3 = settings.accentColor
+    confirmButton.BackgroundColor3 = accentColor
     confirmButton.Font = Enum.Font.GothamBold
     confirmButton.Text = "تأكيد"
     confirmButton.TextSize = 16
-    confirmButton.TextColor3 = settings.textColor
+    confirmButton.TextColor3 = textColor
     confirmButton.Parent = confirmationFrame
     confirmButton.ZIndex = 10
 
     local confirmButtonCorner = Instance.new("UICorner")
-    confirmButtonCorner.CornerRadius = settings.cornerRadius
+    confirmButtonCorner.CornerRadius = cornerRadius
     confirmButtonCorner.Parent = confirmButton
 
     local cancelButton = Instance.new("TextButton")
@@ -163,19 +164,19 @@ local function showConfirmationDialog(parentGui, message, confirmCallback)
     cancelButton.Font = Enum.Font.GothamBold
     cancelButton.Text = "إلغاء"
     cancelButton.TextSize = 16
-    cancelButton.TextColor3 = settings.textColor
+    cancelButton.TextColor3 = textColor
     cancelButton.Parent = confirmationFrame
     cancelButton.ZIndex = 10
 
     local cancelButtonCorner = Instance.new("UICorner")
-    cancelButtonCorner.CornerRadius = settings.cornerRadius
+    cancelButtonCorner.CornerRadius = cornerRadius
     cancelButtonCorner.Parent = cancelButton
 
     confirmButton.MouseEnter:Connect(function()
         TweenService:Create(confirmButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
     end)
     confirmButton.MouseLeave:Connect(function()
-        TweenService:Create(confirmButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
+        TweenService:Create(confirmButton, TweenInfo.new(0.3), {BackgroundColor3 = accentColor}):Play()
     end)
     cancelButton.MouseEnter:Connect(function()
         TweenService:Create(cancelButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(230, 70, 70)}):Play()
@@ -186,7 +187,7 @@ local function showConfirmationDialog(parentGui, message, confirmCallback)
 
     confirmButton.MouseButton1Click:Connect(function()
         local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
+        btnSound.SoundId = buttonSoundId
         btnSound.Volume = 0.5
         btnSound.Parent = parentGui
         btnSound:Play()
@@ -202,7 +203,7 @@ local function showConfirmationDialog(parentGui, message, confirmCallback)
     end)
     cancelButton.MouseButton1Click:Connect(function()
         local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
+        btnSound.SoundId = buttonSoundId
         btnSound.Volume = 0.5
         btnSound.Parent = parentGui
         btnSound:Play()
@@ -224,13 +225,13 @@ local function createFolderInterface(parentGui, folderData)
     folderFrame.Size = UDim2.new(0, 500, 0, 400)
     folderFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
     folderFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    folderFrame.BackgroundTransparency = settings.transparency
+    folderFrame.BackgroundTransparency = transparencyVal
     folderFrame.BorderSizePixel = 0
     folderFrame.ClipsDescendants = true
     folderFrame.Parent = parentGui
 
     local folderCorner = Instance.new("UICorner")
-    folderCorner.CornerRadius = settings.cornerRadius
+    folderCorner.CornerRadius = cornerRadius
     folderCorner.Parent = folderFrame
 
     local folderTitle = Instance.new("TextLabel")
@@ -241,7 +242,7 @@ local function createFolderInterface(parentGui, folderData)
     folderTitle.Font = Enum.Font.GothamBold
     folderTitle.Text = folderData.folderName or "مجلد"
     folderTitle.TextSize = 26
-    folderTitle.TextColor3 = settings.textColor
+    folderTitle.TextColor3 = textColor
     folderTitle.Parent = folderFrame
 
     local folderDesc = Instance.new("TextLabel")
@@ -252,20 +253,53 @@ local function createFolderInterface(parentGui, folderData)
     folderDesc.Font = Enum.Font.Gotham
     folderDesc.Text = folderData.folderDescription or ""
     folderDesc.TextSize = 16
-    folderDesc.TextColor3 = settings.textColor
+    folderDesc.TextColor3 = textColor
     folderDesc.TextXAlignment = Enum.TextXAlignment.Left
     folderDesc.TextWrapped = true
     folderDesc.Parent = folderFrame
+
+    -- إضافة عداد دخول للمجلد يُحدَّث عند الضغط عليه
+    local folderCounterName = "FolderCounter_" .. (folderData.folderName or "Folder")
+    local folderCounter = workspace:FindFirstChild(folderCounterName)
+    if not folderCounter then
+        folderCounter = Instance.new("NumberValue")
+        folderCounter.Name = folderCounterName
+        folderCounter.Value = 0
+        folderCounter.Parent = workspace
+    end
+
+    local counterLabel = Instance.new("TextLabel")
+    counterLabel.Name = "CounterLabel"
+    counterLabel.Size = UDim2.new(0, 80, 0, 20)
+    counterLabel.Position = UDim2.new(1, -90, 0, 5)
+    counterLabel.BackgroundTransparency = 1
+    counterLabel.Font = Enum.Font.GothamBold
+    counterLabel.Text = "دخول: " .. folderCounter.Value
+    counterLabel.TextSize = 16
+    counterLabel.TextColor3 = textColor
+    counterLabel.Parent = folderFrame
+
+    -- إضافة مؤشر "آخر تعديل" (Last Modified) على المجلد
+    local lastModLabel = Instance.new("TextLabel")
+    lastModLabel.Name = "LastModifiedLabel"
+    lastModLabel.Size = UDim2.new(0, 150, 0, 20)
+    lastModLabel.Position = UDim2.new(1, -150, 0, 30)
+    lastModLabel.BackgroundTransparency = 1
+    lastModLabel.Font = Enum.Font.Gotham
+    lastModLabel.Text = "آخر تعديل: --"
+    lastModLabel.TextSize = 16
+    lastModLabel.TextColor3 = textColor
+    lastModLabel.Parent = folderFrame
 
     local backButton = Instance.new("TextButton")
     backButton.Name = "BackButton"
     backButton.Size = UDim2.new(0, 80, 0, 40)
     backButton.Position = UDim2.new(0, 10, 0, 10)
-    backButton.BackgroundColor3 = settings.accentColor
+    backButton.BackgroundColor3 = accentColor
     backButton.Font = Enum.Font.GothamBold
     backButton.Text = "رجوع"
     backButton.TextSize = 18
-    backButton.TextColor3 = settings.textColor
+    backButton.TextColor3 = textColor
     backButton.Parent = folderFrame
 
     local backCorner = Instance.new("UICorner")
@@ -274,10 +308,6 @@ local function createFolderInterface(parentGui, folderData)
 
     backButton.MouseButton1Click:Connect(function()
         folderFrame:Destroy()
-        -- عند العودة يمكن استعادة الواجهة الرئيسية
-        if parentGui:FindFirstChild("MainInterface") == nil then
-            createMainInterface(parentGui)
-        end
     end)
 
     local folderScriptsFrame = Instance.new("ScrollingFrame")
@@ -318,7 +348,7 @@ local function createFolderInterface(parentGui, folderData)
         scriptLabel.Font = Enum.Font.GothamBold
         scriptLabel.Text = scriptData.name .. "\n" .. scriptData.description
         scriptLabel.TextSize = 16
-        scriptLabel.TextColor3 = settings.textColor
+        scriptLabel.TextColor3 = textColor
         scriptLabel.TextWrapped = true
         scriptLabel.Parent = itemFrame
 
@@ -326,11 +356,11 @@ local function createFolderInterface(parentGui, folderData)
         viewButton.Name = "ViewButton"
         viewButton.Size = UDim2.new(0, 180, 0, 40)
         viewButton.Position = UDim2.new(0, 10, 0, 130)
-        viewButton.BackgroundColor3 = settings.accentColor
+        viewButton.BackgroundColor3 = accentColor
         viewButton.Font = Enum.Font.GothamBold
         viewButton.Text = "مشاهدة"
         viewButton.TextSize = 18
-        viewButton.TextColor3 = settings.textColor
+        viewButton.TextColor3 = textColor
         viewButton.Parent = itemFrame
 
         local viewButtonCorner = Instance.new("UICorner")
@@ -345,20 +375,19 @@ local function createFolderInterface(parentGui, folderData)
         glowStroke.Parent = itemFrame
 
         local rotationTweenInfo = TweenInfo.new(2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1)
-        local rotationGoal = {Transparency = 0.2}
-        local rotationTween = TweenService:Create(glowStroke, rotationTweenInfo, rotationGoal)
+        local rotationTween = TweenService:Create(glowStroke, rotationTweenInfo, {Transparency = 0.2})
         rotationTween:Play()
 
         viewButton.MouseEnter:Connect(function()
             TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
         end)
         viewButton.MouseLeave:Connect(function()
-            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
+            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = accentColor}):Play()
         end)
 
         viewButton.MouseButton1Click:Connect(function()
             local btnSound = Instance.new("Sound")
-            btnSound.SoundId = settings.buttonSound
+            btnSound.SoundId = buttonSoundId
             btnSound.Volume = 0.5
             btnSound.Parent = parentGui
             btnSound:Play()
@@ -369,16 +398,20 @@ local function createFolderInterface(parentGui, folderData)
         end)
     end
 
+    -- عند دخول المجلد يتم تحديث "آخر تعديل"
+    local currentTime = os.date("%X")
+    lastModLabel.Text = "آخر تعديل: " .. currentTime
+
     return folderFrame
 end
 
 ---------------------------------------------
 -- دالة إنشاء الواجهة الرئيسية (Main Interface)
--- بحجم 500×400 مع زر بحث
+-- بحجم 500×400 مع زر بحث وتصفية المجلدات
 ---------------------------------------------
 local function createMainInterface(parentGui)
     local openSound = Instance.new("Sound")
-    openSound.SoundId = settings.openSound
+    openSound.SoundId = openSoundId
     openSound.Volume = 0.5
     openSound.Parent = parentGui
     openSound:Play()
@@ -392,7 +425,7 @@ local function createMainInterface(parentGui)
     mainFrame.Size = UDim2.new(0, 500, 0, 400)
     mainFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
     mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    mainFrame.BackgroundTransparency = settings.transparency
+    mainFrame.BackgroundTransparency = transparencyVal
     mainFrame.BorderSizePixel = 0
     mainFrame.ClipsDescendants = true
     mainFrame.Parent = parentGui
@@ -407,7 +440,7 @@ local function createMainInterface(parentGui)
     }):Play()
 
     local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = settings.cornerRadius
+    mainCorner.CornerRadius = cornerRadius
     mainCorner.Parent = mainFrame
 
     local backgroundImage = Instance.new("ImageLabel")
@@ -415,7 +448,7 @@ local function createMainInterface(parentGui)
     backgroundImage.Size = UDim2.new(1, 0, 1, 0)
     backgroundImage.Position = UDim2.new(0, 0, 0, 0)
     backgroundImage.BackgroundTransparency = 1
-    backgroundImage.Image = settings.backgroundImage
+    backgroundImage.Image = backgroundImageId
     backgroundImage.ImageTransparency = 0.2
     backgroundImage.ScaleType = Enum.ScaleType.Crop
     backgroundImage.Parent = mainFrame
@@ -440,7 +473,7 @@ local function createMainInterface(parentGui)
     titleLabel.Font = Enum.Font.GothamBold
     titleLabel.Text = "القائمة الرئيسية"
     titleLabel.TextSize = 28
-    titleLabel.TextColor3 = settings.textColor
+    titleLabel.TextColor3 = textColor
     titleLabel.Parent = mainFrame
 
     -- زر إغلاق الواجهة (X)
@@ -449,17 +482,17 @@ local function createMainInterface(parentGui)
     closeButton.Size = UDim2.new(0, 30, 0, 30)
     closeButton.Position = UDim2.new(1, -40, 0, 10)
     closeButton.BackgroundTransparency = 0.5
-    closeButton.BackgroundColor3 = settings.buttonColor
+    closeButton.BackgroundColor3 = buttonColor
     closeButton.Text = "X"
     closeButton.Font = Enum.Font.GothamBold
     closeButton.TextSize = 24
-    closeButton.TextColor3 = settings.textColor
+    closeButton.TextColor3 = textColor
     closeButton.Parent = mainFrame
     closeButton.ZIndex = 10
 
     closeButton.MouseButton1Click:Connect(function()
         local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
+        btnSound.SoundId = buttonSoundId
         btnSound.Volume = 0.5
         btnSound.Parent = parentGui
         btnSound:Play()
@@ -472,7 +505,7 @@ local function createMainInterface(parentGui)
         mainFrame:Destroy()
     end)
 
-    -- زر بحث عن مجلد في الواجهة
+    -- زر بحث لتصفية المجلدات
     local searchFrame = Instance.new("Frame")
     searchFrame.Name = "SearchFrame"
     searchFrame.Size = UDim2.new(0, 400, 0, 30)
@@ -490,7 +523,7 @@ local function createMainInterface(parentGui)
     searchBox.PlaceholderText = "ابحث عن مجلد..."
     searchBox.Text = ""
     searchBox.TextSize = 16
-    searchBox.TextColor3 = settings.textColor
+    searchBox.TextColor3 = textColor
     searchBox.TextXAlignment = Enum.TextXAlignment.Left
     searchBox.Parent = searchFrame
 
@@ -540,7 +573,7 @@ local function createMainInterface(parentGui)
         folderButton.Parent = foldersFrame
 
         local folderCorner = Instance.new("UICorner")
-        folderCorner.CornerRadius = settings.cornerRadius
+        folderCorner.CornerRadius = cornerRadius
         folderCorner.Parent = folderButton
 
         local glowStroke = Instance.new("UIStroke")
@@ -551,8 +584,7 @@ local function createMainInterface(parentGui)
         glowStroke.Parent = folderButton
 
         local rotationTweenInfo = TweenInfo.new(2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1)
-        local rotationGoal = {Transparency = 0.2}
-        local rotationTween = TweenService:Create(glowStroke, rotationTweenInfo, rotationGoal)
+        local rotationTween = TweenService:Create(glowStroke, rotationTweenInfo, {Transparency = 0.2})
         rotationTween:Play()
 
         local folderNameLabel = Instance.new("TextLabel")
@@ -563,7 +595,7 @@ local function createMainInterface(parentGui)
         folderNameLabel.Font = Enum.Font.GothamBold
         folderNameLabel.Text = folderData.folderName or "مجلد"
         folderNameLabel.TextSize = 20
-        folderNameLabel.TextColor3 = settings.textColor
+        folderNameLabel.TextColor3 = textColor
         folderNameLabel.TextXAlignment = Enum.TextXAlignment.Left
         folderNameLabel.Parent = folderButton
 
@@ -575,11 +607,12 @@ local function createMainInterface(parentGui)
         folderDescLabel.Font = Enum.Font.Gotham
         folderDescLabel.Text = folderData.folderDescription or ""
         folderDescLabel.TextSize = 16
-        folderDescLabel.TextColor3 = settings.textColor
+        folderDescLabel.TextColor3 = textColor
         folderDescLabel.TextXAlignment = Enum.TextXAlignment.Left
         folderDescLabel.TextWrapped = true
         folderDescLabel.Parent = folderButton
 
+        -- عداد دخول المجلد
         local folderCounterName = "FolderCounter_" .. (folderData.folderName or "Folder")
         local folderCounter = workspace:FindFirstChild(folderCounterName)
         if not folderCounter then
@@ -597,21 +630,32 @@ local function createMainInterface(parentGui)
         counterLabel.Font = Enum.Font.GothamBold
         counterLabel.Text = "دخول: " .. folderCounter.Value
         counterLabel.TextSize = 16
-        counterLabel.TextColor3 = settings.textColor
+        counterLabel.TextColor3 = textColor
         counterLabel.Parent = folderButton
+
+        -- علامة "آخر تعديل"
+        local lastModLabel = Instance.new("TextLabel")
+        lastModLabel.Name = "LastModifiedLabel"
+        lastModLabel.Size = UDim2.new(0, 150, 0, 20)
+        lastModLabel.Position = UDim2.new(1, -150, 0, 30)
+        lastModLabel.BackgroundTransparency = 1
+        lastModLabel.Font = Enum.Font.Gotham
+        lastModLabel.Text = "آخر تعديل: --"
+        lastModLabel.TextSize = 16
+        lastModLabel.TextColor3 = textColor
+        lastModLabel.Parent = folderButton
 
         folderButton.MouseButton1Click:Connect(function()
             folderCounter.Value = folderCounter.Value + 1
             counterLabel.Text = "دخول: " .. folderCounter.Value
             local btnSound = Instance.new("Sound")
-            btnSound.SoundId = settings.buttonSound
+            btnSound.SoundId = buttonSoundId
             btnSound.Volume = 0.5
             btnSound.Parent = parentGui
             btnSound:Play()
+            local currentTime = os.date("%X")
+            lastModLabel.Text = "آخر تعديل: " .. currentTime
             showNotification(parentGui, "تم دخول المجلد: " .. folderData.folderName .. " (" .. folderCounter.Value .. ")")
-            if parentGui:FindFirstChild("MainInterface") then
-                parentGui.MainInterface:Destroy()
-            end
             createFolderInterface(parentGui, folderData)
         end)
     end
@@ -625,7 +669,7 @@ end
 ---------------------------------------------
 local function createInfoInterface(parentGui)
     local openSound = Instance.new("Sound")
-    openSound.SoundId = settings.openSound
+    openSound.SoundId = openSoundId
     openSound.Volume = 0.5
     openSound.Parent = parentGui
     openSound:Play()
@@ -639,7 +683,7 @@ local function createInfoInterface(parentGui)
     infoFrame.Size = UDim2.new(0, 500, 0, 400)
     infoFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
     infoFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    infoFrame.BackgroundTransparency = settings.transparency
+    infoFrame.BackgroundTransparency = transparencyVal
     infoFrame.BorderSizePixel = 0
     infoFrame.ClipsDescendants = true
     infoFrame.Parent = parentGui
@@ -654,7 +698,7 @@ local function createInfoInterface(parentGui)
     }):Play()
 
     local infoCorner = Instance.new("UICorner")
-    infoCorner.CornerRadius = settings.cornerRadius
+    infoCorner.CornerRadius = cornerRadius
     infoCorner.Parent = infoFrame
 
     local titleLabel = Instance.new("TextLabel")
@@ -665,7 +709,7 @@ local function createInfoInterface(parentGui)
     titleLabel.Font = Enum.Font.GothamBold
     titleLabel.Text = "معلومات التطبيق"
     titleLabel.TextSize = 28
-    titleLabel.TextColor3 = settings.textColor
+    titleLabel.TextColor3 = textColor
     titleLabel.Parent = infoFrame
 
     local infoContainer = Instance.new("Frame")
@@ -707,7 +751,7 @@ local function createInfoInterface(parentGui)
     nameLabel.Font = Enum.Font.GothamBold
     nameLabel.Text = "اسمك: " .. LocalPlayer.DisplayName
     nameLabel.TextSize = 18
-    nameLabel.TextColor3 = settings.textColor
+    nameLabel.TextColor3 = textColor
     nameLabel.TextXAlignment = Enum.TextXAlignment.Left
     nameLabel.Parent = infoTextContainer
 
@@ -719,7 +763,7 @@ local function createInfoInterface(parentGui)
     idLabel.Font = Enum.Font.GothamBold
     idLabel.Text = "ايديك: " .. tostring(LocalPlayer.UserId)
     idLabel.TextSize = 18
-    idLabel.TextColor3 = settings.textColor
+    idLabel.TextColor3 = textColor
     idLabel.TextXAlignment = Enum.TextXAlignment.Left
     idLabel.Parent = infoTextContainer
 
@@ -731,7 +775,7 @@ local function createInfoInterface(parentGui)
     hackLabel.Font = Enum.Font.GothamBold
     hackLabel.Text = "الهاك: Luna Hack"
     hackLabel.TextSize = 18
-    hackLabel.TextColor3 = settings.textColor
+    hackLabel.TextColor3 = textColor
     hackLabel.TextXAlignment = Enum.TextXAlignment.Left
     hackLabel.Parent = infoTextContainer
 
@@ -743,7 +787,7 @@ local function createInfoInterface(parentGui)
     keyLabel.Font = Enum.Font.GothamBold
     keyLabel.Text = "المفتاح: SecretKey"
     keyLabel.TextSize = 18
-    keyLabel.TextColor3 = settings.textColor
+    keyLabel.TextColor3 = textColor
     keyLabel.TextXAlignment = Enum.TextXAlignment.Left
     keyLabel.Parent = infoTextContainer
 
@@ -766,7 +810,7 @@ local function createInfoInterface(parentGui)
         entry.Name = "PlayerEntry_" .. player.Name
         entry.Size = UDim2.new(1, -10, 0, 40)
         entry.BackgroundTransparency = 0.3
-        entry.BackgroundColor3 = settings.buttonColor
+        entry.BackgroundColor3 = buttonColor
         entry.Parent = playersFrame
 
         local entryCorner = Instance.new("UICorner")
@@ -780,7 +824,7 @@ local function createInfoInterface(parentGui)
         nameText.Font = Enum.Font.GothamBold
         nameText.Text = "اسمه: " .. player.Name
         nameText.TextSize = 16
-        nameText.TextColor3 = settings.textColor
+        nameText.TextColor3 = textColor
         nameText.Parent = entry
 
         local idText = Instance.new("TextLabel")
@@ -791,18 +835,18 @@ local function createInfoInterface(parentGui)
         idText.Font = Enum.Font.GothamBold
         idText.Text = "ايديه: " .. tostring(player.UserId)
         idText.TextSize = 16
-        idText.TextColor3 = settings.textColor
+        idText.TextColor3 = textColor
         idText.Parent = entry
 
         local teleportButton = Instance.new("TextButton")
         teleportButton.Name = "TeleportButton"
         teleportButton.Size = UDim2.new(0, 60, 1, 0)
         teleportButton.Position = UDim2.new(0.98, -60, 0, 0)
-        teleportButton.BackgroundColor3 = settings.accentColor
+        teleportButton.BackgroundColor3 = accentColor
         teleportButton.Font = Enum.Font.GothamBold
         teleportButton.Text = "تنقل"
         teleportButton.TextSize = 16
-        teleportButton.TextColor3 = settings.textColor
+        teleportButton.TextColor3 = textColor
         teleportButton.Parent = entry
 
         local teleportCorner = Instance.new("UICorner")
@@ -820,11 +864,11 @@ local function createInfoInterface(parentGui)
     telegramButton.Name = "TelegramButton"
     telegramButton.Size = UDim2.new(0, 180, 0, 40)
     telegramButton.Position = UDim2.new(0.5, -90, 1, -50)
-    telegramButton.BackgroundColor3 = settings.accentColor
+    telegramButton.BackgroundColor3 = accentColor
     telegramButton.Font = Enum.Font.GothamBold
     telegramButton.Text = "قناة تليجرام"
     telegramButton.TextSize = 18
-    telegramButton.TextColor3 = settings.textColor
+    telegramButton.TextColor3 = textColor
     telegramButton.Parent = infoFrame
 
     local telegramButtonCorner = Instance.new("UICorner")
@@ -835,12 +879,12 @@ local function createInfoInterface(parentGui)
         TweenService:Create(telegramButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
     end)
     telegramButton.MouseLeave:Connect(function()
-        TweenService:Create(telegramButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
+        TweenService:Create(telegramButton, TweenInfo.new(0.3), {BackgroundColor3 = accentColor}):Play()
     end)
 
     telegramButton.MouseButton1Click:Connect(function()
         if setclipboard then
-            setclipboard(settings.telegramLink)
+            setclipboard(telegramLink)
             showNotification(parentGui, "تم نسخ رابط القناة!")
         else
             showNotification(parentGui, "غير متاح النسخ!")
@@ -852,17 +896,17 @@ local function createInfoInterface(parentGui)
     infoCloseButton.Size = UDim2.new(0, 30, 0, 30)
     infoCloseButton.Position = UDim2.new(1, -40, 0, 10)
     infoCloseButton.BackgroundTransparency = 0.5
-    infoCloseButton.BackgroundColor3 = settings.buttonColor
+    infoCloseButton.BackgroundColor3 = buttonColor
     infoCloseButton.Text = "X"
     infoCloseButton.Font = Enum.Font.GothamBold
     infoCloseButton.TextSize = 24
-    infoCloseButton.TextColor3 = settings.textColor
+    infoCloseButton.TextColor3 = textColor
     infoCloseButton.Parent = infoFrame
     infoCloseButton.ZIndex = 10
 
     infoCloseButton.MouseButton1Click:Connect(function()
         local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
+        btnSound.SoundId = buttonSoundId
         btnSound.Volume = 0.5
         btnSound.Parent = parentGui
         btnSound:Play()
@@ -890,24 +934,24 @@ local function createOptionPanel(parentGui)
     optionPanel.Name = "OptionPanel"
     optionPanel.Size = UDim2.new(0, 200, 0, 100)
     optionPanel.Position = UDim2.new(0.95, -220, 0.5, -50)
-    optionPanel.BackgroundColor3 = settings.buttonColor
+    optionPanel.BackgroundColor3 = buttonColor
     optionPanel.BackgroundTransparency = 0.2
     optionPanel.BorderSizePixel = 0
     optionPanel.Parent = parentGui
 
     local optionCorner = Instance.new("UICorner")
-    optionCorner.CornerRadius = settings.cornerRadius
+    optionCorner.CornerRadius = cornerRadius
     optionCorner.Parent = optionPanel
 
     local infoButton = Instance.new("TextButton")
     infoButton.Name = "InfoButton"
     infoButton.Size = UDim2.new(1, -20, 0, 40)
     infoButton.Position = UDim2.new(0, 10, 0, 10)
-    infoButton.BackgroundColor3 = settings.accentColor
+    infoButton.BackgroundColor3 = accentColor
     infoButton.Font = Enum.Font.GothamBold
     infoButton.Text = "معلومات"
     infoButton.TextSize = 18
-    infoButton.TextColor3 = settings.textColor
+    infoButton.TextColor3 = textColor
     infoButton.Parent = optionPanel
 
     local infoButtonCorner = Instance.new("UICorner")
@@ -918,12 +962,12 @@ local function createOptionPanel(parentGui)
         TweenService:Create(infoButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
     end)
     infoButton.MouseLeave:Connect(function()
-        TweenService:Create(infoButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
+        TweenService:Create(infoButton, TweenInfo.new(0.3), {BackgroundColor3 = accentColor}):Play()
     end)
 
     infoButton.MouseButton1Click:Connect(function()
         local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
+        btnSound.SoundId = buttonSoundId
         btnSound.Volume = 0.5
         btnSound.Parent = parentGui
         btnSound:Play()
@@ -940,11 +984,11 @@ local function createOptionPanel(parentGui)
     mainButton.Name = "MainButton"
     mainButton.Size = UDim2.new(1, -20, 0, 40)
     mainButton.Position = UDim2.new(0, 10, 0, 55)
-    mainButton.BackgroundColor3 = settings.accentColor
+    mainButton.BackgroundColor3 = accentColor
     mainButton.Font = Enum.Font.GothamBold
     mainButton.Text = "الواجهة"
     mainButton.TextSize = 18
-    mainButton.TextColor3 = settings.textColor
+    mainButton.TextColor3 = textColor
     mainButton.Parent = optionPanel
 
     local mainButtonCorner = Instance.new("UICorner")
@@ -955,12 +999,12 @@ local function createOptionPanel(parentGui)
         TweenService:Create(mainButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
     end)
     mainButton.MouseLeave:Connect(function()
-        TweenService:Create(mainButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
+        TweenService:Create(mainButton, TweenInfo.new(0.3), {BackgroundColor3 = accentColor}):Play()
     end)
 
     mainButton.MouseButton1Click:Connect(function()
         local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
+        btnSound.SoundId = buttonSoundId
         btnSound.Volume = 0.5
         btnSound.Parent = parentGui
         btnSound:Play()
@@ -995,8 +1039,8 @@ local function createCircularMenu()
     circularButton.Name = "CircularButton"
     circularButton.Size = UDim2.new(0, 60, 0, 60)
     circularButton.Position = UDim2.new(0.95, -30, 0.5, -30)
-    circularButton.BackgroundColor3 = settings.accentColor
-    circularButton.Image = "rbxassetid://7059346373" -- أيقونة القائمة
+    circularButton.BackgroundColor3 = accentColor
+    circularButton.Image = "rbxassetid://7059346373"
     circularButton.ImageColor3 = Color3.new(1, 1, 1)
     circularButton.BackgroundTransparency = 0.1
     circularButton.Parent = circularMenuGUI
@@ -1064,7 +1108,7 @@ local function createCircularMenu()
 
     circularButton.MouseButton1Click:Connect(function()
         local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
+        btnSound.SoundId = buttonSoundId
         btnSound.Volume = 0.5
         btnSound.Parent = circularMenuGUI
         btnSound:Play()
