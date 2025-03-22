@@ -1,10 +1,10 @@
 ---------------------------------------------
 -- مكتبة Luna للواجهات الفخمة في Roblox
 -- تُتيح إضافة مجلدات تحتوي على سكربتات خارجية وتشغيلها عبر واجهة ثنائية المستوى.
--- حجم الواجهة الرئيسية (MainInterface) ونافذة المعلومات (InfoInterface) 500×400.
--- يتم عرض كل مجلد كزر شفاف عريض (450×60) مع تأثير ضوئي (Glow) متحرك،
--- وداخله يظهر اسمان: اسم المجلد ووصفه، بالإضافة إلى موقت يُحسب الوقت منذ إضافته.
--- كما يوجد زر بحث في الواجهة لتصفية المجلدات، وزر إغلاق (X) ظاهر في كل نافذة.
+-- حجم الواجهة الرئيسية (MainInterface) ونافذة المعلومات (InfoInterface) هو 500×400.
+-- يظهر كل مجلد كزر شفاف عريض (450×60) مع تأثير ضوئي (Glow) داخل الزر يحتوي على
+-- اسم المجلد ووصفه، ومع مؤقت يُحسب الوقت منذ إضافته (يُعرض بالثواني/الدقائق/الساعات/الأيام).
+-- في نافذة الواجهة يتم عرض صورة اللاعب واسمه في أعلى اليسار، وبجوار زر الإغلاق (X) يُعرض "اصدار 1.0".
 -- الزر الدائري (CircularButton) قابل للسحب بسلاسة.
 ---------------------------------------------
 
@@ -28,8 +28,7 @@ local settings = {
 
 ---------------------------------------------
 -- بيانات المجلدات الخارجية
--- يُمكن تمرير folderDescription كحقل اختياري
--- سيتم إضافة وقت الإنشاء تلقائيًا
+-- يمكن تمرير folderDescription كحقل اختياري، وسيتم إضافة timestamp تلقائياً عند الإضافة.
 ---------------------------------------------
 local externalFolders = {}
 
@@ -40,6 +39,24 @@ local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
+
+---------------------------------------------
+-- دالة لتحويل الثواني إلى صيغة مقروءة (ثواني/دقائق/ساعات/أيام)
+---------------------------------------------
+local function formatTime(seconds)
+    if seconds < 60 then
+        return seconds .. " ثانية"
+    elseif seconds < 3600 then
+        local mins = math.floor(seconds / 60)
+        return mins .. " دقيقة"
+    elseif seconds < 86400 then
+        local hours = math.floor(seconds / 3600)
+        return hours .. " ساعة"
+    else
+        local days = math.floor(seconds / 86400)
+        return days .. " يوم"
+    end
+end
 
 ---------------------------------------------
 -- دالة عرض إشعار أنيق على الشاشة
@@ -334,7 +351,6 @@ local function createFolderInterface(parentGui, folderData)
         viewButtonCorner.CornerRadius = UDim.new(0, 8)
         viewButtonCorner.Parent = viewButton
 
-        -- تأثير ضوئي (Glow) حول إطار السكربت
         local glowStroke = Instance.new("UIStroke")
         glowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
         glowStroke.Color = Color3.fromRGB(255, 255, 255)
@@ -360,7 +376,6 @@ local function createFolderInterface(parentGui, folderData)
             btnSound.Volume = 0.5
             btnSound.Parent = parentGui
             btnSound:Play()
-
             showConfirmationDialog(parentGui, "هل أنت متأكد أنك تريد تشغيل " .. scriptData.name .. "؟", function()
                 loadstring(game:HttpGet(scriptData.url))()
                 showNotification(parentGui, "تم تشغيل " .. scriptData.name .. "!")
@@ -373,7 +388,7 @@ end
 
 ---------------------------------------------
 -- دالة إنشاء الواجهة الرئيسية (Main Interface)
--- بحجم 500×400 مع زر بحث
+-- بحجم 500×400، مع زر بحث، صورة شخصية واسمه في أعلى اليسار، ونص "اصدار 1.0" بجوار زر الإغلاق.
 ---------------------------------------------
 local function createMainInterface(parentGui)
     local openSound = Instance.new("Sound")
@@ -442,11 +457,36 @@ local function createMainInterface(parentGui)
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = mainFrame
 
-    -- زر إغلاق الواجهة (X) مثل نافذة المعلومات
+    -- صورة شخصية واسم اللاعب في أعلى اليسار
+    local avatar = Instance.new("ImageLabel")
+    avatar.Name = "Avatar"
+    avatar.Size = UDim2.new(0, 50, 0, 50)
+    avatar.Position = UDim2.new(0, 10, 0, 10)
+    avatar.BackgroundTransparency = 1
+    avatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId .. "&w=150&h=150"
+    avatar.Parent = mainFrame
+
+    local avatarCorner = Instance.new("UICorner")
+    avatarCorner.CornerRadius = UDim.new(0, 25)
+    avatarCorner.Parent = avatar
+
+    local playerNameLabel = Instance.new("TextLabel")
+    playerNameLabel.Name = "PlayerNameLabel"
+    playerNameLabel.Size = UDim2.new(0, 150, 0, 50)
+    playerNameLabel.Position = UDim2.new(0, 70, 0, 10)
+    playerNameLabel.BackgroundTransparency = 1
+    playerNameLabel.Font = Enum.Font.GothamBold
+    playerNameLabel.Text = LocalPlayer.DisplayName
+    playerNameLabel.TextSize = 18
+    playerNameLabel.TextColor3 = settings.textColor
+    playerNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    playerNameLabel.Parent = mainFrame
+
+    -- زر إغلاق (X) مع نص الإصدار "اصدار 1.0" بجانبه
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "CloseButton"
     closeButton.Size = UDim2.new(0, 30, 0, 30)
-    closeButton.Position = UDim2.new(1, -40, 0, 10)
+    closeButton.Position = UDim2.new(1, -70, 0, 10)
     closeButton.BackgroundTransparency = 0.5
     closeButton.BackgroundColor3 = settings.buttonColor
     closeButton.Text = "X"
@@ -456,22 +496,19 @@ local function createMainInterface(parentGui)
     closeButton.Parent = mainFrame
     closeButton.ZIndex = 10
 
-    closeButton.MouseButton1Click:Connect(function()
-        local btnSound = Instance.new("Sound")
-        btnSound.SoundId = settings.buttonSound
-        btnSound.Volume = 0.5
-        btnSound.Parent = parentGui
-        btnSound:Play()
-        TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 0, 0, 0),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Rotation = 5
-        }):Play()
-        wait(0.5)
-        mainFrame:Destroy()
-    end)
+    local versionLabel = Instance.new("TextLabel")
+    versionLabel.Name = "VersionLabel"
+    versionLabel.Size = UDim2.new(0, 40, 0, 30)
+    versionLabel.Position = UDim2.new(1, -35, 0, 10)
+    versionLabel.BackgroundTransparency = 1
+    versionLabel.Font = Enum.Font.GothamBold
+    versionLabel.Text = "اصدار 1.0"
+    versionLabel.TextSize = 16
+    versionLabel.TextColor3 = settings.textColor
+    versionLabel.Parent = mainFrame
+    versionLabel.ZIndex = 10
 
-    -- زر بحث عن مجلد
+    -- قسم البحث عن مجلد
     local searchFrame = Instance.new("Frame")
     searchFrame.Name = "SearchFrame"
     searchFrame.Size = UDim2.new(0, 400, 0, 30)
@@ -542,7 +579,6 @@ local function createMainInterface(parentGui)
         folderCorner.CornerRadius = settings.cornerRadius
         folderCorner.Parent = folderButton
 
-        -- تأثير ضوئي (Glow) حول زر المجلد
         local glowStroke = Instance.new("UIStroke")
         glowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
         glowStroke.Color = Color3.fromRGB(255, 255, 255)
@@ -555,7 +591,6 @@ local function createMainInterface(parentGui)
         local rotationTween = TweenService:Create(glowStroke, rotationTweenInfo, rotationGoal)
         rotationTween:Play()
 
-        -- إضافة نص الاسم والوصف داخل الزر
         local folderNameLabel = Instance.new("TextLabel")
         folderNameLabel.Name = "FolderNameLabel"
         folderNameLabel.Size = UDim2.new(1, -20, 0, 25)
@@ -581,8 +616,7 @@ local function createMainInterface(parentGui)
         folderDescLabel.TextWrapped = true
         folderDescLabel.Parent = folderButton
 
-        -- إضافة موقت: يتم حساب الوقت منذ إضافة المجلد
-        -- إذا لم يكن هناك حقل timestamp في البيانات، نضيفه الآن
+        -- الموقت: حساب الوقت منذ إضافة المجلد وتحويله إلى صيغة مقروءة
         if not folderData.timestamp then
             folderData.timestamp = os.time()
         end
@@ -601,7 +635,7 @@ local function createMainInterface(parentGui)
         spawn(function()
             while folderButton.Parent do
                 local elapsed = os.time() - folderData.timestamp
-                timerLabel.Text = "منذ: " .. elapsed .. " ثانية"
+                timerLabel.Text = formatTime(elapsed)
                 wait(1)
             end
         end)
@@ -612,7 +646,6 @@ local function createMainInterface(parentGui)
             btnSound.Volume = 0.5
             btnSound.Parent = parentGui
             btnSound:Play()
-            showNotification(parentGui, "تم دخول المجلد: " .. folderData.folderName)
             createFolderInterface(parentGui, folderData)
         end)
     end
@@ -912,7 +945,7 @@ local function createOptionPanel(parentGui)
     infoButton.Parent = optionPanel
 
     local infoButtonCorner = Instance.new("UICorner")
-    infoButtonCorner.CornerRadius = UDim.new(0, 8)
+    infoButtonCorner.CornerRadius = settings.cornerRadius
     infoButtonCorner.Parent = infoButton
 
     infoButton.MouseEnter:Connect(function()
@@ -949,7 +982,7 @@ local function createOptionPanel(parentGui)
     mainButton.Parent = optionPanel
 
     local mainButtonCorner = Instance.new("UICorner")
-    mainButtonCorner.CornerRadius = UDim.new(0, 8)
+    mainButtonCorner.CornerRadius = settings.cornerRadius
     mainButtonCorner.Parent = mainButton
 
     mainButton.MouseEnter:Connect(function()
@@ -1089,7 +1122,6 @@ end
 -- دالة إضافة مجلد يحتوي على سكربتات (AddFolder)
 ---------------------------------------------
 function Luna:AddFolder(folderData)
-    -- إضافة توقيت إنشاء المجلد إن لم يكن موجوداً
     if not folderData.timestamp then
         folderData.timestamp = os.time()
     end
