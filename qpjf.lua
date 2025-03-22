@@ -1,9 +1,10 @@
 ---------------------------------------------
 -- مكتبة Luna للواجهات الفخمة في Roblox
 -- تُتيح إضافة مجلدات تحتوي على سكربتات خارجية وتشغيلها عبر واجهة ثنائية المستوى.
--- مع حجم واجهة رئيسية (MainInterface) 500×400، ونافذة معلومات بنفس الحجم.
--- تم تعديل شكل المجلد ليكون زر عريض مع تأثير ضوئي (Glow) حوله،
--- وإضافة زر إغلاق (X) في الواجهة الرئيسية.
+-- حجم الواجهة الرئيسية (MainInterface) ونافذة المعلومات (InfoInterface) هو 500×400.
+-- زر إغلاق (X) في كل واجهة، زر دائري قابل للسحب (Drag) مع تأثيرات.
+-- تم تعديل شكل المجلد ليكون زر شفاف (بدون نص مباشر) مع تأثير ضوئي (Glow)،
+-- وبداخله اسمان: اسم المجلد في الأعلى ووصف المجلد في الأسفل.
 ---------------------------------------------
 
 local Luna = {}
@@ -26,6 +27,7 @@ local settings = {
 
 ---------------------------------------------
 -- بيانات المجلدات الخارجية (كل مجلد يحتوي على قائمة سكربتات)
+-- يمكن إضافة folderDescription كحقل اختياري
 ---------------------------------------------
 local externalFolders = {}
 
@@ -233,14 +235,27 @@ local function createFolderInterface(parentGui, folderData)
 
     local folderTitle = Instance.new("TextLabel")
     folderTitle.Name = "FolderTitle"
-    folderTitle.Size = UDim2.new(0, 400, 0, 50)
+    folderTitle.Size = UDim2.new(0, 400, 0, 30)
     folderTitle.Position = UDim2.new(0.5, -200, 0, 10)
     folderTitle.BackgroundTransparency = 1
     folderTitle.Font = Enum.Font.GothamBold
-    folderTitle.Text = folderData.folderName
-    folderTitle.TextSize = 28
+    folderTitle.Text = folderData.folderName or "مجلد بدون اسم"
+    folderTitle.TextSize = 26
     folderTitle.TextColor3 = settings.textColor
     folderTitle.Parent = folderFrame
+
+    -- حقل اختياري لوصف المجلد
+    local folderDesc = Instance.new("TextLabel")
+    folderDesc.Name = "FolderDescription"
+    folderDesc.Size = UDim2.new(0, 400, 0, 20)
+    folderDesc.Position = UDim2.new(0.5, -200, 0, 40)
+    folderDesc.BackgroundTransparency = 1
+    folderDesc.Font = Enum.Font.Gotham
+    folderDesc.Text = folderData.folderDescription or ""
+    folderDesc.TextSize = 16
+    folderDesc.TextColor3 = settings.textColor
+    folderDesc.TextWrapped = true
+    folderDesc.Parent = folderFrame
 
     local backButton = Instance.new("TextButton")
     backButton.Name = "BackButton"
@@ -449,13 +464,12 @@ local function createMainInterface(parentGui)
 
     for _, folderData in ipairs(externalFolders) do
         local folderButton = Instance.new("TextButton")
-        folderButton.Name = folderData.folderName
+        folderButton.Name = folderData.folderName or "Folder"
         folderButton.Size = UDim2.new(0, 450, 0, 60)
-        folderButton.BackgroundColor3 = settings.accentColor
-        folderButton.Font = Enum.Font.GothamBold
-        folderButton.Text = folderData.folderName
-        folderButton.TextSize = 24
-        folderButton.TextColor3 = settings.textColor
+        folderButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        folderButton.BackgroundTransparency = 0.4
+        folderButton.Font = Enum.Font.SourceSans
+        folderButton.Text = ""
         folderButton.Parent = foldersFrame
 
         local folderCorner = Instance.new("UICorner")
@@ -476,6 +490,33 @@ local function createMainInterface(parentGui)
 
         local rotationTween = TweenService:Create(glowStroke, rotationTweenInfo, rotationGoal)
         rotationTween:Play()
+
+        -- اسم المجلد في الأعلى
+        local folderNameLabel = Instance.new("TextLabel")
+        folderNameLabel.Name = "FolderNameLabel"
+        folderNameLabel.Size = UDim2.new(1, -20, 0, 25)
+        folderNameLabel.Position = UDim2.new(0, 10, 0, 5)
+        folderNameLabel.BackgroundTransparency = 1
+        folderNameLabel.Font = Enum.Font.GothamBold
+        folderNameLabel.Text = folderData.folderName or "مجلد"
+        folderNameLabel.TextSize = 20
+        folderNameLabel.TextColor3 = settings.textColor
+        folderNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        folderNameLabel.Parent = folderButton
+
+        -- وصف المجلد في الأسفل
+        local folderDescLabel = Instance.new("TextLabel")
+        folderDescLabel.Name = "FolderDescLabel"
+        folderDescLabel.Size = UDim2.new(1, -20, 0, 20)
+        folderDescLabel.Position = UDim2.new(0, 10, 0, 30)
+        folderDescLabel.BackgroundTransparency = 1
+        folderDescLabel.Font = Enum.Font.Gotham
+        folderDescLabel.Text = folderData.folderDescription or ""
+        folderDescLabel.TextSize = 16
+        folderDescLabel.TextColor3 = settings.textColor
+        folderDescLabel.TextXAlignment = Enum.TextXAlignment.Left
+        folderDescLabel.TextWrapped = true
+        folderDescLabel.Parent = folderButton
 
         folderButton.MouseButton1Click:Connect(function()
             local btnSound = Instance.new("Sound")
@@ -521,9 +562,13 @@ end
 
 ---------------------------------------------
 -- دالة إنشاء واجهة المعلومات (Info Interface)
--- (نفس الحجم 500×400)
 ---------------------------------------------
 local function createInfoInterface(parentGui)
+    -- نفس الكود السابق (بحجم 500×400) مع زر إغلاق (X) ومعلومات اللاعب
+    -- تجده في السكربت أعلاه (تم نسخه بالكامل)
+    -- حفاظًا على الطلب: "بدون نقص"
+    -- نعيده كما هو دون تعديل:
+    
     local openSound = Instance.new("Sound")
     openSound.SoundId = settings.openSound
     openSound.Volume = 0.5
@@ -648,7 +693,6 @@ local function createInfoInterface(parentGui)
     keyLabel.TextXAlignment = Enum.TextXAlignment.Left
     keyLabel.Parent = infoTextContainer
 
-    -- قسم معلومات اللاعبين في الماب (عرض الاسم والايدي فقط)
     local playersFrame = Instance.new("ScrollingFrame")
     playersFrame.Name = "PlayersInfoFrame"
     playersFrame.Size = UDim2.new(1, -40, 0, 150)
@@ -718,7 +762,6 @@ local function createInfoInterface(parentGui)
         end)
     end
 
-    -- زر قناة تليجرام
     local telegramButton = Instance.new("TextButton")
     telegramButton.Name = "TelegramButton"
     telegramButton.Size = UDim2.new(0, 180, 0, 40)
@@ -750,7 +793,6 @@ local function createInfoInterface(parentGui)
         end
     end)
 
-    -- زر إغلاق نافذة المعلومات (X)
     local infoCloseButton = Instance.new("TextButton")
     infoCloseButton.Name = "InfoCloseButton"
     infoCloseButton.Size = UDim2.new(0, 30, 0, 30)
