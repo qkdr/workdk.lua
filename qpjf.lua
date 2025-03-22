@@ -2,9 +2,9 @@
 -- مكتبة Luna للواجهات الفخمة في Roblox
 -- تُتيح إضافة مجلدات تحتوي على سكربتات خارجية وتشغيلها عبر واجهة ثنائية المستوى.
 -- حجم الواجهة الرئيسية (MainInterface) ونافذة المعلومات (InfoInterface) هو 500×400.
--- كل مجلد يظهر كزر شفاف عريض مع تأثير ضوئي، داخله اسمان: الاسم والوصف،
--- ويظهر بجانبه عداد يُحدّث كلما دخل المستخدم المجلد.
--- تمت إضافة زر بحث لتصفية المجلدات، وزر إغلاق (X) في نافذة الواجهة مثل نافذة المعلومات.
+-- كل مجلد يظهر كزر شفاف عريض مع تأثير ضوئي (Glow) يحتوي على اسم المجلد ووصفه، 
+-- بالإضافة إلى عداد يظهر عدد مرات دخول المستخدم للمجلد.
+-- تمت إضافة زر بحث لتصفية المجلدات، وزر إغلاق (X) في الواجهة.
 -- الزر الدائري (CircularButton) قابل للسحب بسلاسة.
 ---------------------------------------------
 
@@ -274,47 +274,107 @@ local function createFolderInterface(parentGui, folderData)
 
     backButton.MouseButton1Click:Connect(function()
         folderFrame:Destroy()
+        -- عند العودة يمكن استعادة الواجهة الرئيسية
+        if parentGui:FindFirstChild("MainInterface") == nil then
+            createMainInterface(parentGui)
+        end
     end)
 
-    -- عداد دخول المجلد: يتم تحديثه عند الضغط على المجلد
-    local folderCounterName = "FolderCounter_" .. (folderData.folderName or "Folder")
-    local folderCounter = workspace:FindFirstChild(folderCounterName)
-    if not folderCounter then
-        folderCounter = Instance.new("NumberValue")
-        folderCounter.Name = folderCounterName
-        folderCounter.Value = 0
-        folderCounter.Parent = workspace
+    local folderScriptsFrame = Instance.new("ScrollingFrame")
+    folderScriptsFrame.Name = "FolderScriptsFrame"
+    folderScriptsFrame.Size = UDim2.new(1, -40, 0, 300)
+    folderScriptsFrame.Position = UDim2.new(0, 20, 0, 70)
+    folderScriptsFrame.BackgroundTransparency = 1
+    folderScriptsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    folderScriptsFrame.ScrollBarThickness = 4
+    folderScriptsFrame.Parent = folderFrame
+
+    local folderGrid = Instance.new("UIGridLayout")
+    folderGrid.CellSize = UDim2.new(0, 200, 0, 240)
+    folderGrid.CellPadding = UDim2.new(0, 10, 0, 10)
+    folderGrid.Parent = folderScriptsFrame
+
+    folderGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        folderScriptsFrame.CanvasSize = UDim2.new(0, folderGrid.AbsoluteContentSize.X, 0, folderGrid.AbsoluteContentSize.Y)
+    end)
+
+    for _, scriptData in ipairs(folderData.scripts or {}) do
+        local itemFrame = Instance.new("Frame")
+        itemFrame.Name = scriptData.name
+        itemFrame.Size = UDim2.new(0, 200, 0, 240)
+        itemFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        itemFrame.BackgroundTransparency = 0.7
+        itemFrame.Parent = folderScriptsFrame
+
+        local itemCorner = Instance.new("UICorner")
+        itemCorner.CornerRadius = UDim.new(0, 10)
+        itemCorner.Parent = itemFrame
+
+        local scriptLabel = Instance.new("TextLabel")
+        scriptLabel.Name = "ScriptLabel"
+        scriptLabel.Size = UDim2.new(1, -20, 0, 120)
+        scriptLabel.Position = UDim2.new(0, 10, 0, 10)
+        scriptLabel.BackgroundTransparency = 1
+        scriptLabel.Font = Enum.Font.GothamBold
+        scriptLabel.Text = scriptData.name .. "\n" .. scriptData.description
+        scriptLabel.TextSize = 16
+        scriptLabel.TextColor3 = settings.textColor
+        scriptLabel.TextWrapped = true
+        scriptLabel.Parent = itemFrame
+
+        local viewButton = Instance.new("TextButton")
+        viewButton.Name = "ViewButton"
+        viewButton.Size = UDim2.new(0, 180, 0, 40)
+        viewButton.Position = UDim2.new(0, 10, 0, 130)
+        viewButton.BackgroundColor3 = settings.accentColor
+        viewButton.Font = Enum.Font.GothamBold
+        viewButton.Text = "مشاهدة"
+        viewButton.TextSize = 18
+        viewButton.TextColor3 = settings.textColor
+        viewButton.Parent = itemFrame
+
+        local viewButtonCorner = Instance.new("UICorner")
+        viewButtonCorner.CornerRadius = UDim.new(0, 8)
+        viewButtonCorner.Parent = viewButton
+
+        local glowStroke = Instance.new("UIStroke")
+        glowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+        glowStroke.Color = Color3.fromRGB(255, 255, 255)
+        glowStroke.Thickness = 2
+        glowStroke.Transparency = 0.7
+        glowStroke.Parent = itemFrame
+
+        local rotationTweenInfo = TweenInfo.new(2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1)
+        local rotationGoal = {Transparency = 0.2}
+        local rotationTween = TweenService:Create(glowStroke, rotationTweenInfo, rotationGoal)
+        rotationTween:Play()
+
+        viewButton.MouseEnter:Connect(function()
+            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
+        end)
+        viewButton.MouseLeave:Connect(function()
+            TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
+        end)
+
+        viewButton.MouseButton1Click:Connect(function()
+            local btnSound = Instance.new("Sound")
+            btnSound.SoundId = settings.buttonSound
+            btnSound.Volume = 0.5
+            btnSound.Parent = parentGui
+            btnSound:Play()
+            showConfirmationDialog(parentGui, "هل أنت متأكد أنك تريد تشغيل " .. scriptData.name .. "؟", function()
+                loadstring(game:HttpGet(scriptData.url))()
+                showNotification(parentGui, "تم تشغيل " .. scriptData.name .. "!")
+            end)
+        end)
     end
-
-    -- عند الضغط على المجلد، يتم زيادة العداد
-    backButton.MouseButton1Click:Connect(function() end) -- لمزيد من التوضيح سيتم زيادته عند الضغط على الزر الرئيسي للمجلد
-
-    local folderButton = Instance.new("TextButton")
-    folderButton.Name = "FolderButton"
-    folderButton.Size = UDim2.new(0, 450, 0, 60)
-    folderButton.BackgroundTransparency = 0.4
-    folderButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    folderButton.Font = Enum.Font.SourceSans
-    folderButton.Text = ""
-    folderButton.Parent = folderFrame
-
-    local folderButtonCorner = Instance.new("UICorner")
-    folderButtonCorner.CornerRadius = settings.cornerRadius
-    folderButtonCorner.Parent = folderButton
-
-    -- عند الضغط على الزر الرئيسي للمجلد، يتم زيادة العداد وتفتح نافذة المجلد
-    folderButton.MouseButton1Click:Connect(function()
-        folderCounter.Value = folderCounter.Value + 1
-        showNotification(parentGui, "تم دخول المجلد: " .. folderData.folderName .. " (" .. folderCounter.Value .. ")")
-        createFolderInterface(parentGui, folderData)
-    end)
 
     return folderFrame
 end
 
 ---------------------------------------------
 -- دالة إنشاء الواجهة الرئيسية (Main Interface)
--- بحجم 500×400 مع زر بحث عن مجلد
+-- بحجم 500×400 مع زر بحث
 ---------------------------------------------
 local function createMainInterface(parentGui)
     local openSound = Instance.new("Sound")
@@ -383,7 +443,7 @@ local function createMainInterface(parentGui)
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = mainFrame
 
-    -- زر إغلاق الواجهة (X) كما في نافذة المعلومات
+    -- زر إغلاق الواجهة (X)
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "CloseButton"
     closeButton.Size = UDim2.new(0, 30, 0, 30)
@@ -434,7 +494,6 @@ local function createMainInterface(parentGui)
     searchBox.TextXAlignment = Enum.TextXAlignment.Left
     searchBox.Parent = searchFrame
 
-    -- عند كتابة نص البحث، يتم تصفية المجلدات
     searchBox.Changed:Connect(function(prop)
         if prop == "Text" then
             for _, folderButton in pairs(mainFrame.FoldersFrame:GetChildren()) do
@@ -484,7 +543,6 @@ local function createMainInterface(parentGui)
         folderCorner.CornerRadius = settings.cornerRadius
         folderCorner.Parent = folderButton
 
-        -- تأثير ضوئي (Glow)
         local glowStroke = Instance.new("UIStroke")
         glowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
         glowStroke.Color = Color3.fromRGB(255, 255, 255)
@@ -497,7 +555,6 @@ local function createMainInterface(parentGui)
         local rotationTween = TweenService:Create(glowStroke, rotationTweenInfo, rotationGoal)
         rotationTween:Play()
 
-        -- إضافة نص الاسم والوصف داخل الزر
         local folderNameLabel = Instance.new("TextLabel")
         folderNameLabel.Name = "FolderNameLabel"
         folderNameLabel.Size = UDim2.new(1, -20, 0, 25)
@@ -523,7 +580,6 @@ local function createMainInterface(parentGui)
         folderDescLabel.TextWrapped = true
         folderDescLabel.Parent = folderButton
 
-        -- عداد دخول المجلد
         local folderCounterName = "FolderCounter_" .. (folderData.folderName or "Folder")
         local folderCounter = workspace:FindFirstChild(folderCounterName)
         if not folderCounter then
@@ -553,6 +609,9 @@ local function createMainInterface(parentGui)
             btnSound.Parent = parentGui
             btnSound:Play()
             showNotification(parentGui, "تم دخول المجلد: " .. folderData.folderName .. " (" .. folderCounter.Value .. ")")
+            if parentGui:FindFirstChild("MainInterface") then
+                parentGui.MainInterface:Destroy()
+            end
             createFolderInterface(parentGui, folderData)
         end)
     end
@@ -952,7 +1011,6 @@ local function createCircularMenu()
     buttonUIStroke.Transparency = 0.5
     buttonUIStroke.Parent = circularButton
 
-    -- السحب السلس
     local dragging = false
     local dragInput, dragStart, startPos
 
@@ -1033,7 +1091,7 @@ function Luna:AddFolder(folderData)
 end
 
 ---------------------------------------------
--- يمكن إضافة المزيد من الوظائف حسب الحاجة
+-- يمكن إضافة المزيد من الوظائف إذا احتجت لذلك
 ---------------------------------------------
 
 return Luna
