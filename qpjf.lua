@@ -318,7 +318,7 @@ local function createFolderInterface(parentGui, folderData)
         viewButtonCorner.CornerRadius = UDim.new(0, 8)
         viewButtonCorner.Parent = viewButton
 
-        -- تأثير ضوئي (Glow) حول زر المجلد
+        -- تأثير ضوئي (Glow) حول إطار السكربت
         local glowStroke = Instance.new("UIStroke")
         glowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
         glowStroke.Color = Color3.fromRGB(255, 255, 255)
@@ -568,14 +568,216 @@ local function createInfoInterface(parentGui)
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = infoFrame
 
-    -- بقية محتويات نافذة المعلومات (بدون وقت اللعب) ...
-    -- (نفس الكود السابق لنافذة المعلومات)
+    -- إطار شفاف لمعلومات اللاعب (بدون وقت اللعب)
+    local infoContainer = Instance.new("Frame")
+    infoContainer.Name = "InfoContainer"
+    infoContainer.Size = UDim2.new(1, -40, 0, 100)
+    infoContainer.Position = UDim2.new(0, 20, 0, 70)
+    infoContainer.BackgroundTransparency = 0.5
+    infoContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    infoContainer.Parent = infoFrame
 
-    -- ... سنختصره هنا كي لا نطيل، نفترض أنه مطابق للكود السابق:
-    -- (اسمك، ايديك، الهاك، المفتاح، معلومات اللاعبين في الماب، زر تليجرام، زر إغلاق X)
+    local containerCorner = Instance.new("UICorner")
+    containerCorner.CornerRadius = UDim.new(0, 8)
+    containerCorner.Parent = infoContainer
 
-    -- زر إغلاق نافذة المعلومات (X) كما في الكود السابق
-    -- ...
+    local smallPlayerIcon = Instance.new("ImageLabel")
+    smallPlayerIcon.Name = "SmallPlayerIcon"
+    smallPlayerIcon.Size = UDim2.new(0, 60, 0, 60)
+    smallPlayerIcon.Position = UDim2.new(0, 10, 0, 20)
+    smallPlayerIcon.BackgroundTransparency = 1
+    smallPlayerIcon.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId .. "&w=150&h=150"
+    smallPlayerIcon.Parent = infoContainer
+
+    local smallIconCorner = Instance.new("UICorner")
+    smallIconCorner.CornerRadius = UDim.new(0, 30)
+    smallIconCorner.Parent = smallPlayerIcon
+
+    local infoTextContainer = Instance.new("Frame")
+    infoTextContainer.Name = "InfoTextContainer"
+    infoTextContainer.Size = UDim2.new(1, -80, 1, 0)
+    infoTextContainer.Position = UDim2.new(0, 70, 0, 0)
+    infoTextContainer.BackgroundTransparency = 1
+    infoTextContainer.Parent = infoContainer
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "NameLabel"
+    nameLabel.Size = UDim2.new(1, 0, 0, 20)
+    nameLabel.Position = UDim2.new(0, 0, 0, 5)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.Text = "اسمك: " .. LocalPlayer.DisplayName
+    nameLabel.TextSize = 18
+    nameLabel.TextColor3 = settings.textColor
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = infoTextContainer
+
+    local idLabel = Instance.new("TextLabel")
+    idLabel.Name = "IDLabel"
+    idLabel.Size = UDim2.new(1, 0, 0, 20)
+    idLabel.Position = UDim2.new(0, 0, 0, 30)
+    idLabel.BackgroundTransparency = 1
+    idLabel.Font = Enum.Font.GothamBold
+    idLabel.Text = "ايديك: " .. tostring(LocalPlayer.UserId)
+    idLabel.TextSize = 18
+    idLabel.TextColor3 = settings.textColor
+    idLabel.TextXAlignment = Enum.TextXAlignment.Left
+    idLabel.Parent = infoTextContainer
+
+    local hackLabel = Instance.new("TextLabel")
+    hackLabel.Name = "HackLabel"
+    hackLabel.Size = UDim2.new(1, 0, 0, 20)
+    hackLabel.Position = UDim2.new(0, 0, 0, 55)
+    hackLabel.BackgroundTransparency = 1
+    hackLabel.Font = Enum.Font.GothamBold
+    hackLabel.Text = "الهاك: Luna Hack"
+    hackLabel.TextSize = 18
+    hackLabel.TextColor3 = settings.textColor
+    hackLabel.TextXAlignment = Enum.TextXAlignment.Left
+    hackLabel.Parent = infoTextContainer
+
+    local keyLabel = Instance.new("TextLabel")
+    keyLabel.Name = "KeyLabel"
+    keyLabel.Size = UDim2.new(1, 0, 0, 20)
+    keyLabel.Position = UDim2.new(0, 0, 0, 80)
+    keyLabel.BackgroundTransparency = 1
+    keyLabel.Font = Enum.Font.GothamBold
+    keyLabel.Text = "المفتاح: SecretKey"
+    keyLabel.TextSize = 18
+    keyLabel.TextColor3 = settings.textColor
+    keyLabel.TextXAlignment = Enum.TextXAlignment.Left
+    keyLabel.Parent = infoTextContainer
+
+    -- قسم معلومات اللاعبين في الماب (عرض الاسم والايدي فقط)
+    local playersFrame = Instance.new("ScrollingFrame")
+    playersFrame.Name = "PlayersInfoFrame"
+    playersFrame.Size = UDim2.new(1, -40, 0, 150)
+    playersFrame.Position = UDim2.new(0, 20, 0, 180)
+    playersFrame.BackgroundTransparency = 0.5
+    playersFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    playersFrame.BorderSizePixel = 0
+    playersFrame.ScrollBarThickness = 4
+    playersFrame.Parent = infoFrame
+
+    local playersGrid = Instance.new("UIListLayout")
+    playersGrid.Padding = UDim.new(0, 5)
+    playersGrid.Parent = playersFrame
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        local entry = Instance.new("Frame")
+        entry.Name = "PlayerEntry_" .. player.Name
+        entry.Size = UDim2.new(1, -10, 0, 40)
+        entry.BackgroundTransparency = 0.3
+        entry.BackgroundColor3 = settings.buttonColor
+        entry.Parent = playersFrame
+
+        local entryCorner = Instance.new("UICorner")
+        entryCorner.CornerRadius = UDim.new(0, 6)
+        entryCorner.Parent = entry
+
+        local nameText = Instance.new("TextLabel")
+        nameText.Name = "NameText"
+        nameText.Size = UDim2.new(0.5, 0, 1, 0)
+        nameText.BackgroundTransparency = 1
+        nameText.Font = Enum.Font.GothamBold
+        nameText.Text = "اسمه: " .. player.Name
+        nameText.TextSize = 16
+        nameText.TextColor3 = settings.textColor
+        nameText.Parent = entry
+
+        local idText = Instance.new("TextLabel")
+        idText.Name = "IDText"
+        idText.Size = UDim2.new(0.4, 0, 1, 0)
+        idText.Position = UDim2.new(0.51, 0, 0, 0)
+        idText.BackgroundTransparency = 1
+        idText.Font = Enum.Font.GothamBold
+        idText.Text = "ايديه: " .. tostring(player.UserId)
+        idText.TextSize = 16
+        idText.TextColor3 = settings.textColor
+        idText.Parent = entry
+
+        local teleportButton = Instance.new("TextButton")
+        teleportButton.Name = "TeleportButton"
+        teleportButton.Size = UDim2.new(0, 60, 1, 0)
+        teleportButton.Position = UDim2.new(0.98, -60, 0, 0)
+        teleportButton.BackgroundColor3 = settings.accentColor
+        teleportButton.Font = Enum.Font.GothamBold
+        teleportButton.Text = "تنقل"
+        teleportButton.TextSize = 16
+        teleportButton.TextColor3 = settings.textColor
+        teleportButton.Parent = entry
+
+        local teleportCorner = Instance.new("UICorner")
+        teleportCorner.CornerRadius = UDim.new(0, 6)
+        teleportCorner.Parent = teleportButton
+
+        teleportButton.MouseButton1Click:Connect(function()
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5)
+            end
+        end)
+    end
+
+    -- زر قناة تليجرام
+    local telegramButton = Instance.new("TextButton")
+    telegramButton.Name = "TelegramButton"
+    telegramButton.Size = UDim2.new(0, 180, 0, 40)
+    telegramButton.Position = UDim2.new(0.5, -90, 1, -50)
+    telegramButton.BackgroundColor3 = settings.accentColor
+    telegramButton.Font = Enum.Font.GothamBold
+    telegramButton.Text = "قناة تليجرام"
+    telegramButton.TextSize = 18
+    telegramButton.TextColor3 = settings.textColor
+    telegramButton.Parent = infoFrame
+
+    local telegramButtonCorner = Instance.new("UICorner")
+    telegramButtonCorner.CornerRadius = UDim.new(0, 8)
+    telegramButtonCorner.Parent = telegramButton
+
+    telegramButton.MouseEnter:Connect(function()
+        TweenService:Create(telegramButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
+    end)
+    telegramButton.MouseLeave:Connect(function()
+        TweenService:Create(telegramButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
+    end)
+
+    telegramButton.MouseButton1Click:Connect(function()
+        if setclipboard then
+            setclipboard(settings.telegramLink)
+            showNotification(parentGui, "تم نسخ رابط القناة!")
+        else
+            showNotification(parentGui, "غير متاح النسخ!")
+        end
+    end)
+
+    -- زر إغلاق نافذة المعلومات (X)
+    local infoCloseButton = Instance.new("TextButton")
+    infoCloseButton.Name = "InfoCloseButton"
+    infoCloseButton.Size = UDim2.new(0, 30, 0, 30)
+    infoCloseButton.Position = UDim2.new(1, -40, 0, 10)
+    infoCloseButton.BackgroundTransparency = 0.5
+    infoCloseButton.BackgroundColor3 = settings.buttonColor
+    infoCloseButton.Text = "X"
+    infoCloseButton.Font = Enum.Font.GothamBold
+    infoCloseButton.TextSize = 24
+    infoCloseButton.TextColor3 = settings.textColor
+    infoCloseButton.Parent = infoFrame
+    infoCloseButton.ZIndex = 10
+
+    infoCloseButton.MouseButton1Click:Connect(function()
+        local btnSound = Instance.new("Sound")
+        btnSound.SoundId = settings.buttonSound
+        btnSound.Volume = 0.5
+        btnSound.Parent = parentGui
+        btnSound:Play()
+        TweenService:Create(infoFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Rotation = 5
+        }):Play()
+        wait(0.5)
+        infoFrame:Destroy()
+    end)
 
     return infoFrame
 end
@@ -584,18 +786,6 @@ end
 -- دالة إنشاء لوحة الخيارات (Option Panel)
 ---------------------------------------------
 local function createOptionPanel(parentGui)
-    -- (نفس الكود السابق لإظهار أزرار "معلومات" و"الواجهة")
-    -- ...
-    -- إعادة استخدامه كما هو
-    -- ...
-    -- يعرض زر InfoButton و MainButton
-    -- ...
-    -- عند الضغط على InfoButton => عرض نافذة المعلومات أو إغلاقها
-    -- عند الضغط على MainButton => عرض واجهة المجلدات أو إغلاقها
-    -- ...
-    -- نعيده كما هو دون تغيير
-    -- (تم نسخه في الأكواد السابقة)
-    -- ...
     if parentGui:FindFirstChild("OptionPanel") then
         parentGui.OptionPanel:Destroy()
     end
