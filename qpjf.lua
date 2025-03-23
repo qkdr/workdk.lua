@@ -1,13 +1,15 @@
 ---------------------------------------------
 -- مكتبة Luna للواجهات الفخمة في Roblox
 -- تُتيح إضافة مجلدات تحتوي على سكربتات خارجية وتشغيلها عبر واجهة ثنائية المستوى.
--- حجم الواجهة الرئيسية ونافذة المعلومات هو 500×400.
--- يتم عرض كل مجلد كزر شفاف عريض (450×60) مع تأثير ضوئي (Glow) متحرك،
--- وداخله يظهر اسم المجلد (في الأعلى) ووصفه (في الأسفل) مع مؤقت يحسب الوقت منذ إضافته
--- (يُعرض بالثواني/الدقائق/الساعات/الأيام).
--- في نافذة الواجهة يتم عرض صورة اللاعب واسمه في أعلى اليسار، وبجوار زر الإغلاق (X) يظهر نص "اصدار 1.0".
--- تمت إضافة زر بحث لتصفية المجلدات.
--- كما يتم إضافة تأثير BlurEffect (ضباب) يُحاكي انعكاسات الشمس والأضواء في الماب.
+-- حجم الواجهة الرئيسية (MainInterface) ونافذة المعلومات (InfoInterface) هو 500×400.
+-- كل مجلد يظهر كزر شفاف عريض (450×60) مع تأثير ضوئي (Glow) وإطار أنيق،
+-- وداخل الزر يتم عرض:
+--    • أيقونة مجلد أنيقة (ImageLabel)؛
+--    • اسم المجلد (FolderNameLabel)؛
+--    • وصف المجلد (FolderDescLabel)؛
+--    • وعدد السكربتات الموجودة: "سكربتات: X".
+-- في نافذة الواجهة يتم عرض صورة اللاعب واسمه في أعلى اليسار، وبجانب زر الإغلاق (X)
+-- يظهر نص "اصدار 1.0".
 -- الزر الدائري (CircularButton) قابل للسحب بسلاسة.
 ---------------------------------------------
 
@@ -26,13 +28,13 @@ local settings = {
     textColor = Color3.fromRGB(255, 255, 255),
     cornerRadius = UDim.new(0, 12),
     transparency = 0.2,
-    telegramLink = "https://t.me/YourChannelLink"
+    telegramLink = "https://t.me/YourChannelLink",
+    folderIcon = "rbxassetid://123456789" -- ضع هنا معرف أيقونة المجلد (placeholder)
 }
 
 ---------------------------------------------
 -- بيانات المجلدات الخارجية
 -- يمكن تمرير folderDescription كحقل اختياري.
--- يتم تعيين timestamp عند أول إضافة (لا يعاد عند إعادة الدخول).
 ---------------------------------------------
 local externalFolders = {}
 
@@ -43,24 +45,6 @@ local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
-
----------------------------------------------
--- دالة تحويل الثواني إلى صيغة مقروءة
----------------------------------------------
-local function formatTime(seconds)
-    if seconds < 60 then
-        return seconds .. " ثانية"
-    elseif seconds < 3600 then
-        local mins = math.floor(seconds / 60)
-        return mins .. " دقيقة"
-    elseif seconds < 86400 then
-        local hours = math.floor(seconds / 3600)
-        return hours .. " ساعة"
-    else
-        local days = math.floor(seconds / 86400)
-        return days .. " يوم"
-    end
-end
 
 ---------------------------------------------
 -- دالة عرض إشعار أنيق على الشاشة
@@ -392,7 +376,7 @@ end
 
 ---------------------------------------------
 -- دالة إنشاء الواجهة الرئيسية (Main Interface)
--- بحجم 500×400 مع زر بحث، صورة شخصية واسم في أعلى اليسار، ونص "اصدار 1.0" بجوار زر الإغلاق.
+-- بحجم 500×400 مع زر بحث، صورة شخصية واسمه في أعلى اليسار، ونص "اصدار 1.0" بجانب زر الإغلاق.
 ---------------------------------------------
 local function createMainInterface(parentGui)
     local openSound = Instance.new("Sound")
@@ -400,12 +384,6 @@ local function createMainInterface(parentGui)
     openSound.Volume = 0.5
     openSound.Parent = parentGui
     openSound:Play()
-
-    -- إضافة تأثير BlurEffect (ضباب) لمحاكاة انعكاس الشمس والأضواء
-    local blur = Instance.new("BlurEffect")
-    blur.Name = "InterfaceBlur"
-    blur.Size = 15
-    blur.Parent = game.Lighting
 
     if parentGui:FindFirstChild("MainInterface") then
         parentGui.MainInterface:Destroy()
@@ -467,7 +445,7 @@ local function createMainInterface(parentGui)
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = mainFrame
 
-    -- صورة اللاعب واسمه في أعلى اليسار
+    -- صورة شخصية واسمه في أعلى اليسار
     local avatar = Instance.new("ImageLabel")
     avatar.Name = "Avatar"
     avatar.Size = UDim2.new(0, 50, 0, 50)
@@ -492,7 +470,7 @@ local function createMainInterface(parentGui)
     playerNameLabel.TextXAlignment = Enum.TextXAlignment.Left
     playerNameLabel.Parent = mainFrame
 
-    -- زر إغلاق (X) مع نص "اصدار 1.0" بجواره
+    -- زر إغلاق (X) مع نص الإصدار "اصدار 1.0"
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "CloseButton"
     closeButton.Size = UDim2.new(0, 30, 0, 30)
@@ -626,29 +604,29 @@ local function createMainInterface(parentGui)
         folderDescLabel.TextWrapped = true
         folderDescLabel.Parent = folderButton
 
-        -- إضافة مؤقت يحسب الوقت منذ إنشاء المجلد (لا يعاد إذا لم تُضاف سكربتات جديدة)
-        if not folderData.timestamp then
-            folderData.timestamp = os.time()
-        end
+        -- إضافة عدد السكربتات داخل المجلد (عرض عدد السكربتات)
+        local scriptCount = #folderData.scripts
+        local scriptsLabel = Instance.new("TextLabel")
+        scriptsLabel.Name = "ScriptsLabel"
+        scriptsLabel.Size = UDim2.new(0, 120, 0, 20)
+        scriptsLabel.Position = UDim2.new(1, -130, 0, 5)
+        scriptsLabel.BackgroundTransparency = 1
+        scriptsLabel.Font = Enum.Font.GothamBold
+        scriptsLabel.Text = "سكربتات: " .. scriptCount
+        scriptsLabel.TextSize = 16
+        scriptsLabel.TextColor3 = settings.textColor
+        scriptsLabel.TextXAlignment = Enum.TextXAlignment.Right
+        scriptsLabel.Parent = folderButton
 
-        local timerLabel = Instance.new("TextLabel")
-        timerLabel.Name = "TimerLabel"
-        timerLabel.Size = UDim2.new(0, 120, 0, 20)
-        timerLabel.Position = UDim2.new(1, -130, 0, 5)
-        timerLabel.BackgroundTransparency = 1
-        timerLabel.Font = Enum.Font.GothamBold
-        timerLabel.TextSize = 16
-        timerLabel.TextColor3 = settings.textColor
-        timerLabel.TextXAlignment = Enum.TextXAlignment.Right
-        timerLabel.Parent = folderButton
-
-        spawn(function()
-            while folderButton.Parent do
-                local elapsed = os.time() - folderData.timestamp
-                timerLabel.Text = formatTime(elapsed)
-                wait(1)
-            end
-        end)
+        -- إضافة أيقونة مجلد
+        local folderIcon = Instance.new("ImageLabel")
+        folderIcon.Name = "FolderIcon"
+        folderIcon.Size = UDim2.new(0, 30, 0, 30)
+        folderIcon.Position = UDim2.new(0, 10, 0, 5)
+        folderIcon.BackgroundTransparency = 1
+        folderIcon.Image = settings.folderIcon
+        folderIcon.ImageColor3 = settings.accentColor
+        folderIcon.Parent = folderButton
 
         folderButton.MouseButton1Click:Connect(function()
             local btnSound = Instance.new("Sound")
