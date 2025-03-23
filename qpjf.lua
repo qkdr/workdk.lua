@@ -2,15 +2,14 @@
 -- مكتبة Luna للواجهات الفخمة في Roblox
 -- تُتيح إضافة مجلدات تحتوي على سكربتات خارجية وتشغيلها عبر واجهة ثنائية المستوى.
 -- حجم الواجهة الرئيسية (MainInterface) ونافذة المعلومات (InfoInterface) هو 500×400.
--- كل مجلد يظهر كزر شفاف عريض (450×60) مع تأثير ضوئي (Glow) وإطار أنيق،
--- وداخل الزر يتم عرض:
---    • أيقونة مجلد أنيقة (ImageLabel)؛
+-- كل مجلد يظهر كزر شفاف عريض (450×60) مع إطار زجاجي (Glass effect) متحرك،
+-- يحتوي داخل الزر على:
+--    • أيقونة مجلد أنيقة (يمكن تعديل معرف الصورة عبر settings.folderIcon)؛
 --    • اسم المجلد (FolderNameLabel)؛
 --    • وصف المجلد (FolderDescLabel)؛
---    • وعدد السكربتات الموجودة: "سكربتات: X".
--- في نافذة الواجهة يتم عرض صورة اللاعب واسمه في أعلى اليسار، وبجانب زر الإغلاق (X)
--- يظهر نص "اصدار 1.0".
--- الزر الدائري (CircularButton) قابل للسحب بسلاسة.
+--    • عرض عدد السكربتات الموجودة داخل المجلد (ScriptsLabel).
+-- في نافذة الواجهة يتم عرض صورة اللاعب واسمه في أعلى اليسار، وبجانب زر الإغلاق (X) يظهر نص "اصدار 1.0".
+-- كما يوجد زر بحث لتصفية المجلدات، والزر الدائري (CircularButton) قابل للسحب بسلاسة.
 ---------------------------------------------
 
 local Luna = {}
@@ -29,7 +28,7 @@ local settings = {
     cornerRadius = UDim.new(0, 12),
     transparency = 0.2,
     telegramLink = "https://t.me/YourChannelLink",
-    folderIcon = "rbxassetid://123456789" -- ضع هنا معرف أيقونة المجلد (placeholder)
+    folderIcon = "rbxassetid://123456789" -- ضع هنا معرف أيقونة المجلد (يمكن تغييره)
 }
 
 ---------------------------------------------
@@ -222,6 +221,44 @@ local function showConfirmationDialog(parentGui, message, confirmCallback)
 end
 
 ---------------------------------------------
+-- دالة إنشاء تأثير زجاج (Glass Effect) على زر المجلد
+---------------------------------------------
+local function applyGlassEffect(folderButton)
+    local glassEffect = Instance.new("Frame")
+    glassEffect.Name = "GlassEffect"
+    glassEffect.Size = UDim2.new(0, 50, 1, 0)
+    glassEffect.Position = UDim2.new(-1, 0, 0, 0)
+    glassEffect.BackgroundTransparency = 0.5
+    glassEffect.BackgroundColor3 = Color3.new(1, 1, 1)
+    glassEffect.Parent = folderButton
+    glassEffect.ZIndex = folderButton.ZIndex + 1
+
+    local glassGradient = Instance.new("UIGradient")
+    glassGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.new(1,1,1)),
+        ColorSequenceKeypoint.new(0.5, Color3.new(1,1,1)),
+        ColorSequenceKeypoint.new(1, Color3.new(1,1,1))
+    })
+    glassGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.8),
+        NumberSequenceKeypoint.new(0.5, 0),
+        NumberSequenceKeypoint.new(1, 0.8)
+    })
+    glassGradient.Parent = glassEffect
+
+    local function tweenGlass()
+        local tween1 = TweenService:Create(glassEffect, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(1, 0, 0, 0)})
+        local tween2 = TweenService:Create(glassEffect, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(-1, 0, 0, 0)})
+        tween1:Play()
+        tween1.Completed:Wait()
+        tween2:Play()
+        tween2.Completed:Wait()
+        tweenGlass() -- حلقة مستمرة
+    end
+    spawn(tweenGlass)
+end
+
+---------------------------------------------
 -- دالة إنشاء واجهة المجلدات (Folder Interface)
 ---------------------------------------------
 local function createFolderInterface(parentGui, folderData)
@@ -338,18 +375,6 @@ local function createFolderInterface(parentGui, folderData)
         local viewButtonCorner = Instance.new("UICorner")
         viewButtonCorner.CornerRadius = UDim.new(0, 8)
         viewButtonCorner.Parent = viewButton
-
-        local glowStroke = Instance.new("UIStroke")
-        glowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
-        glowStroke.Color = Color3.fromRGB(255, 255, 255)
-        glowStroke.Thickness = 2
-        glowStroke.Transparency = 0.7
-        glowStroke.Parent = itemFrame
-
-        local rotationTweenInfo = TweenInfo.new(2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1)
-        local rotationGoal = {Transparency = 0.2}
-        local rotationTween = TweenService:Create(glowStroke, rotationTweenInfo, rotationGoal)
-        rotationTween:Play()
 
         viewButton.MouseEnter:Connect(function()
             TweenService:Create(viewButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
@@ -470,7 +495,7 @@ local function createMainInterface(parentGui)
     playerNameLabel.TextXAlignment = Enum.TextXAlignment.Left
     playerNameLabel.Parent = mainFrame
 
-    -- زر إغلاق (X) مع نص الإصدار "اصدار 1.0"
+    -- زر إغلاق (X) مع نص "اصدار 1.0"
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "CloseButton"
     closeButton.Size = UDim2.new(0, 30, 0, 30)
@@ -567,17 +592,10 @@ local function createMainInterface(parentGui)
         folderCorner.CornerRadius = settings.cornerRadius
         folderCorner.Parent = folderButton
 
-        local glowStroke = Instance.new("UIStroke")
-        glowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
-        glowStroke.Color = Color3.fromRGB(255, 255, 255)
-        glowStroke.Thickness = 2
-        glowStroke.Transparency = 0.7
-        glowStroke.Parent = folderButton
+        -- إزالة التأثير القديم (الضوء) وعدم إضافته
 
-        local rotationTweenInfo = TweenInfo.new(2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1)
-        local rotationGoal = {Transparency = 0.2}
-        local rotationTween = TweenService:Create(glowStroke, rotationTweenInfo, rotationGoal)
-        rotationTween:Play()
+        -- إضافة تأثير "زجاج" (Glass effect) يتحرك على زر المجلد
+        applyGlassEffect(folderButton)
 
         local folderNameLabel = Instance.new("TextLabel")
         folderNameLabel.Name = "FolderNameLabel"
@@ -604,7 +622,7 @@ local function createMainInterface(parentGui)
         folderDescLabel.TextWrapped = true
         folderDescLabel.Parent = folderButton
 
-        -- إضافة عدد السكربتات داخل المجلد (عرض عدد السكربتات)
+        -- عرض عدد السكربتات داخل المجلد
         local scriptCount = #folderData.scripts
         local scriptsLabel = Instance.new("TextLabel")
         scriptsLabel.Name = "ScriptsLabel"
@@ -617,16 +635,6 @@ local function createMainInterface(parentGui)
         scriptsLabel.TextColor3 = settings.textColor
         scriptsLabel.TextXAlignment = Enum.TextXAlignment.Right
         scriptsLabel.Parent = folderButton
-
-        -- إضافة أيقونة مجلد
-        local folderIcon = Instance.new("ImageLabel")
-        folderIcon.Name = "FolderIcon"
-        folderIcon.Size = UDim2.new(0, 30, 0, 30)
-        folderIcon.Position = UDim2.new(0, 10, 0, 5)
-        folderIcon.BackgroundTransparency = 1
-        folderIcon.Image = settings.folderIcon
-        folderIcon.ImageColor3 = settings.accentColor
-        folderIcon.Parent = folderButton
 
         folderButton.MouseButton1Click:Connect(function()
             local btnSound = Instance.new("Sound")
