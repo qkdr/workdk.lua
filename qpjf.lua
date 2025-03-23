@@ -2,10 +2,11 @@
 -- مكتبة Luna للواجهات الفخمة في Roblox
 -- تُتيح إضافة مجلدات تحتوي على سكربتات خارجية وتشغيلها عبر واجهة ثنائية المستوى.
 -- حجم الواجهة الرئيسية (MainInterface) ونافذة المعلومات (InfoInterface) هو 500×400.
--- يظهر كل مجلد كزر شفاف عريض (450×60) مع تأثير ضوئي (Glow) داخل الزر يحتوي على
--- اسم المجلد ووصفه، ومع مؤقت يُحسب الوقت منذ إضافته (يُعرض بالثواني/الدقائق/الساعات/الأيام).
--- في نافذة الواجهة يتم عرض صورة اللاعب واسمه في أعلى اليسار، وبجوار زر الإغلاق (X) يُعرض "اصدار 1.0".
+-- يظهر كل مجلد كزر شفاف عريض (450×60) مع تأثير ضوئي متحرك (Glow) داخله،
+-- ويحتوي على نصيّين: اسم المجلد (في الأعلى) ووصفه (في الأسفل)، بالإضافة إلى مؤقت يُحسب الوقت منذ إنشائه (بصيغة ثواني/دقائق/ساعات/أيام) ولا يُعاد تعيينه.
+-- في نافذة الواجهة يتم عرض صورة اللاعب واسمه في أعلى اليسار، وبجوار زر الإغلاق (X) نص "اصدار 1.0".
 -- الزر الدائري (CircularButton) قابل للسحب بسلاسة.
+-- كما يتم تطبيق تأثيرات بصرية على المشهد (Bloom, SunRays, Blur) لتعكس تأثير الشمس والإضاءة وتكون النتيجة مغوشة قليلاً.
 ---------------------------------------------
 
 local Luna = {}
@@ -28,7 +29,7 @@ local settings = {
 
 ---------------------------------------------
 -- بيانات المجلدات الخارجية
--- يمكن تمرير folderDescription كحقل اختياري، وسيتم إضافة timestamp تلقائياً عند الإضافة.
+-- يمكن تمرير folderDescription كحقل اختياري؛ وسيتم إضافة timestamp (وقت الإنشاء) عند الإضافة
 ---------------------------------------------
 local externalFolders = {}
 
@@ -39,9 +40,10 @@ local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
+local Lighting = game:GetService("Lighting")
 
 ---------------------------------------------
--- دالة لتحويل الثواني إلى صيغة مقروءة (ثواني/دقائق/ساعات/أيام)
+-- دالة لتحويل الثواني إلى صيغة مقروءة (ثانية/دقيقة/ساعة/يوم)
 ---------------------------------------------
 local function formatTime(seconds)
     if seconds < 60 then
@@ -55,6 +57,29 @@ local function formatTime(seconds)
     else
         local days = math.floor(seconds / 86400)
         return days .. " يوم"
+    end
+end
+
+---------------------------------------------
+-- دالة تطبيق تأثيرات المشهد (Bloom, SunRays, Blur)
+---------------------------------------------
+local function applyMapEffects()
+    if not Lighting:FindFirstChild("LunaEffects") then
+        local effectsFolder = Instance.new("Folder")
+        effectsFolder.Name = "LunaEffects"
+        effectsFolder.Parent = Lighting
+
+        local bloom = Instance.new("BloomEffect", effectsFolder)
+        bloom.Intensity = 1
+        bloom.Size = 24
+        bloom.Threshold = 2
+
+        local sunRays = Instance.new("SunRaysEffect", effectsFolder)
+        sunRays.Intensity = 0.2
+        sunRays.Spread = 1
+
+        local blur = Instance.new("BlurEffect", effectsFolder)
+        blur.Size = 5
     end
 end
 
@@ -388,7 +413,7 @@ end
 
 ---------------------------------------------
 -- دالة إنشاء الواجهة الرئيسية (Main Interface)
--- بحجم 500×400، مع زر بحث، صورة شخصية واسمه في أعلى اليسار، ونص "اصدار 1.0" بجوار زر الإغلاق.
+-- بحجم 500×400 مع زر بحث، صورة شخصية واسمه في أعلى اليسار، ونص "اصدار 1.0" بجوار زر الإغلاق.
 ---------------------------------------------
 local function createMainInterface(parentGui)
     local openSound = Instance.new("Sound")
@@ -482,7 +507,7 @@ local function createMainInterface(parentGui)
     playerNameLabel.TextXAlignment = Enum.TextXAlignment.Left
     playerNameLabel.Parent = mainFrame
 
-    -- زر إغلاق (X) مع نص الإصدار "اصدار 1.0" بجانبه
+    -- زر إغلاق الواجهة (X) مع نص الإصدار "اصدار 1.0" بجانبه
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "CloseButton"
     closeButton.Size = UDim2.new(0, 30, 0, 30)
@@ -508,7 +533,7 @@ local function createMainInterface(parentGui)
     versionLabel.Parent = mainFrame
     versionLabel.ZIndex = 10
 
-    -- قسم البحث عن مجلد
+    -- زر بحث عن مجلد
     local searchFrame = Instance.new("Frame")
     searchFrame.Name = "SearchFrame"
     searchFrame.Size = UDim2.new(0, 400, 0, 30)
@@ -616,7 +641,7 @@ local function createMainInterface(parentGui)
         folderDescLabel.TextWrapped = true
         folderDescLabel.Parent = folderButton
 
-        -- الموقت: حساب الوقت منذ إضافة المجلد وتحويله إلى صيغة مقروءة
+        -- موقت يُحسب الوقت منذ إنشاء المجلد (لا يُعاد تعيينه عند إعادة الدخول)
         if not folderData.timestamp then
             folderData.timestamp = os.time()
         end
@@ -1116,6 +1141,7 @@ function Luna:Show()
     local _, screenGui = createCircularMenu()
     local mainUI = createMainInterface(screenGui)
     mainUI.Name = "MainInterface"
+    applyMapEffects()  -- تطبيق تأثيرات المشهد (Bloom, SunRays, Blur)
 end
 
 ---------------------------------------------
