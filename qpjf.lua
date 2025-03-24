@@ -1,15 +1,15 @@
 ---------------------------------------------
 -- مكتبة Luna للواجهات الفخمة في Roblox
--- تُتيح إضافة مجلدات تحتوي على سكربتات خارجية وتشغيلها عبر واجهة ثنائية المستوى.
+-- تُتيح إضافة مجلدات (مفتوحة أو مغلقة) تحتوي على سكربتات خارجية وتشغيلها عبر واجهة ثنائية المستوى.
 -- حجم الواجهة الرئيسية (MainInterface) ونافذة المعلومات (InfoInterface) هو 500×400.
--- كل مجلد يظهر كزر شفاف عريض (450×60) مع إطار زجاجي (Glass effect) متحرك،
--- يحتوي داخل الزر على:
---    • أيقونة مجلد أنيقة (يمكن تعديل معرف الصورة عبر settings.folderIcon)؛
+-- كل مجلد يظهر كزر شفاف عريض (450×60) مع تأثير "زجاج" (Glass effect) متحرك، يحتوي داخل الزر على:
+--    • أيقونة مجلد أنيقة (أو نص "مغلق" إذا كان المجلد مغلق)؛
 --    • اسم المجلد (FolderNameLabel)؛
 --    • وصف المجلد (FolderDescLabel)؛
---    • عرض عدد السكربتات الموجودة داخل المجلد (ScriptsLabel).
--- في نافذة الواجهة يتم عرض صورة اللاعب واسمه في أعلى اليسار، وبجانب زر الإغلاق (X) يظهر نص "اصدار 1.0".
--- كما يوجد زر بحث لتصفية المجلدات، والزر الدائري (CircularButton) قابل للسحب بسلاسة.
+--    • وعدد السكربتات الموجودة: "سكربتات: X".
+-- في نافذة الواجهة يظهر في أعلى اليسار صورة اللاعب واسمه، وزر الإغلاق (X) في أعلى اليمين.
+-- عند النقر على مجلد مفتوح يتم الدخول إليه، أما إذا كان المجلد مغلق فيظهر إشعار "هذا الملف مغلق".
+-- الزر الدائري (CircularButton) قابل للسحب بسلاسة.
 ---------------------------------------------
 
 local Luna = {}
@@ -28,12 +28,12 @@ local settings = {
     cornerRadius = UDim.new(0, 12),
     transparency = 0.2,
     telegramLink = "https://t.me/YourChannelLink",
-    folderIcon = "rbxassetid://123456789" -- ضع هنا معرف أيقونة المجلد (يمكن تغييره)
+    folderIcon = "rbxassetid://123456789" -- معرف أيقونة المجلد (يمكن تغييره)
 }
 
 ---------------------------------------------
 -- بيانات المجلدات الخارجية
--- يمكن تمرير folderDescription كحقل اختياري.
+-- كل مجلد عبارة عن جدول يحتوي على folderName، folderDescription، scripts، وخاصية locked (اختياري)
 ---------------------------------------------
 local externalFolders = {}
 
@@ -221,7 +221,7 @@ local function showConfirmationDialog(parentGui, message, confirmCallback)
 end
 
 ---------------------------------------------
--- دالة إنشاء تأثير زجاج (Glass Effect) على زر المجلد
+-- دالة تطبيق تأثير "زجاج" (Glass effect) على زر المجلد
 ---------------------------------------------
 local function applyGlassEffect(folderButton)
     local glassEffect = Instance.new("Frame")
@@ -401,7 +401,7 @@ end
 
 ---------------------------------------------
 -- دالة إنشاء الواجهة الرئيسية (Main Interface)
--- بحجم 500×400 مع زر بحث، صورة شخصية واسمه في أعلى اليسار، ونص "اصدار 1.0" بجانب زر الإغلاق.
+-- بحجم 500×400 مع زر بحث، صورة شخصية واسمه في أعلى اليسار، وزر إغلاق (X) ظاهر في أعلى اليمين.
 ---------------------------------------------
 local function createMainInterface(parentGui)
     local openSound = Instance.new("Sound")
@@ -495,11 +495,11 @@ local function createMainInterface(parentGui)
     playerNameLabel.TextXAlignment = Enum.TextXAlignment.Left
     playerNameLabel.Parent = mainFrame
 
-    -- زر إغلاق (X) مع نص "اصدار 1.0"
+    -- زر إغلاق (X) في نافذة الواجهة (بدون نص الإصدار)
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "CloseButton"
     closeButton.Size = UDim2.new(0, 30, 0, 30)
-    closeButton.Position = UDim2.new(1, -70, 0, 10)
+    closeButton.Position = UDim2.new(1, -40, 0, 10)
     closeButton.BackgroundTransparency = 0.5
     closeButton.BackgroundColor3 = settings.buttonColor
     closeButton.Text = "X"
@@ -509,17 +509,20 @@ local function createMainInterface(parentGui)
     closeButton.Parent = mainFrame
     closeButton.ZIndex = 10
 
-    local versionLabel = Instance.new("TextLabel")
-    versionLabel.Name = "VersionLabel"
-    versionLabel.Size = UDim2.new(0, 40, 0, 30)
-    versionLabel.Position = UDim2.new(1, -35, 0, 10)
-    versionLabel.BackgroundTransparency = 1
-    versionLabel.Font = Enum.Font.GothamBold
-    versionLabel.Text = "اصدار 1.0"
-    versionLabel.TextSize = 16
-    versionLabel.TextColor3 = settings.textColor
-    versionLabel.Parent = mainFrame
-    versionLabel.ZIndex = 10
+    closeButton.MouseButton1Click:Connect(function()
+        local btnSound = Instance.new("Sound")
+        btnSound.SoundId = settings.buttonSound
+        btnSound.Volume = 0.5
+        btnSound.Parent = parentGui
+        btnSound:Play()
+        TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Rotation = 5
+        }):Play()
+        wait(0.5)
+        mainFrame:Destroy()
+    end)
 
     -- زر بحث عن مجلد
     local searchFrame = Instance.new("Frame")
@@ -592,9 +595,7 @@ local function createMainInterface(parentGui)
         folderCorner.CornerRadius = settings.cornerRadius
         folderCorner.Parent = folderButton
 
-        -- إزالة التأثير القديم (الضوء) وعدم إضافته
-
-        -- إضافة تأثير "زجاج" (Glass effect) يتحرك على زر المجلد
+        -- تطبيق تأثير "زجاج" (Glass effect) على زر المجلد
         applyGlassEffect(folderButton)
 
         local folderNameLabel = Instance.new("TextLabel")
@@ -622,7 +623,6 @@ local function createMainInterface(parentGui)
         folderDescLabel.TextWrapped = true
         folderDescLabel.Parent = folderButton
 
-        -- عرض عدد السكربتات داخل المجلد
         local scriptCount = #folderData.scripts
         local scriptsLabel = Instance.new("TextLabel")
         scriptsLabel.Name = "ScriptsLabel"
@@ -636,14 +636,31 @@ local function createMainInterface(parentGui)
         scriptsLabel.TextXAlignment = Enum.TextXAlignment.Right
         scriptsLabel.Parent = folderButton
 
-        folderButton.MouseButton1Click:Connect(function()
-            local btnSound = Instance.new("Sound")
-            btnSound.SoundId = settings.buttonSound
-            btnSound.Volume = 0.5
-            btnSound.Parent = parentGui
-            btnSound:Play()
-            createFolderInterface(parentGui, folderData)
-        end)
+        -- إذا كان المجلد مغلق، نعرض نص "مغلق" بدلاً من أيقونة المجلد ونمنع الدخول إليه
+        if folderData.locked then
+            local lockedLabel = Instance.new("TextLabel")
+            lockedLabel.Name = "LockedLabel"
+            lockedLabel.Size = UDim2.new(0, 60, 0, 30)
+            lockedLabel.Position = UDim2.new(0, 10, 0.5, -15)
+            lockedLabel.BackgroundTransparency = 1
+            lockedLabel.Font = Enum.Font.GothamBold
+            lockedLabel.Text = "مغلق"
+            lockedLabel.TextSize = 20
+            lockedLabel.TextColor3 = Color3.fromRGB(200, 0, 0)
+            lockedLabel.Parent = folderButton
+            folderButton.MouseButton1Click:Connect(function()
+                showNotification(parentGui, "هذا الملف مغلق ولا يمكن فتحه.")
+            end)
+        else
+            folderButton.MouseButton1Click:Connect(function()
+                local btnSound = Instance.new("Sound")
+                btnSound.SoundId = settings.buttonSound
+                btnSound.Volume = 0.5
+                btnSound.Parent = parentGui
+                btnSound:Play()
+                createFolderInterface(parentGui, folderData)
+            end)
+        end
     end
 
     return mainFrame
@@ -1032,7 +1049,7 @@ local function createCircularMenu()
     circularButton.Parent = circularMenuGUI
 
     local buttonCorner = Instance.new("UICorner")
-    buttonCorner.CornerRadius = UDim.new(1, 0)
+    buttonCorner.CornerRadius = settings.cornerRadius
     buttonCorner.Parent = circularButton
 
     local buttonUIStroke = Instance.new("UIStroke")
@@ -1115,12 +1132,24 @@ function Luna:Show()
 end
 
 ---------------------------------------------
--- دالة إضافة مجلد يحتوي على سكربتات (AddFolder)
+-- دالة إضافة مجلد مفتوح يحتوي على سكربتات (AddFolder)
 ---------------------------------------------
 function Luna:AddFolder(folderData)
     if not folderData.timestamp then
         folderData.timestamp = os.time()
     end
+    folderData.locked = false
+    table.insert(externalFolders, folderData)
+end
+
+---------------------------------------------
+-- دالة إضافة مجلد مغلق يحتوي على سكربتات (AddLockedFolder)
+---------------------------------------------
+function Luna:AddLockedFolder(folderData)
+    if not folderData.timestamp then
+        folderData.timestamp = os.time()
+    end
+    folderData.locked = true
     table.insert(externalFolders, folderData)
 end
 
