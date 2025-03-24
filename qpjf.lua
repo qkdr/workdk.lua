@@ -4,14 +4,10 @@
 -- حجم الواجهة الرئيسية (MainInterface) ونافذة المعلومات (InfoInterface) هو 500×400.
 -- كل مجلد يظهر كزر شفاف عريض (450×60) مع تأثير "زجاج" (Glass effect) متحرك،
 -- يحتوي داخل الزر على:
---    • (بالنسبة للمجلد المفتوح) أيقونة مجلد (المعرف في settings.folderIcon)؛
---    • (بالنسبة للمجلد المغلق) أيقونة قفل (نص "🔒")؛
---    • اسم المجلد (FolderNameLabel)؛
---    • وصف المجلد (FolderDescLabel)؛
---    • وعدد السكربتات: "سكربتات: X" (للملفات المفتوحة).
--- عند الضغط على مجلد مفتوح يتم فتحه، أما المجلد المغلق فيعرض إشعار بأن الملف مغلق.
--- في نافذة الواجهة يتم عرض صورة اللاعب واسمه في أعلى اليسار، وزر إغلاق (X) في أعلى اليمين.
--- كما يوجد زر بحث لتصفية المجلدات، والزر الدائري (CircularButton) قابل للسحب بسلاسة.
+--    • إذا كان المجلد مفتوح: أيقونة مجلد (يمكن تعديلها عبر settings.folderIcon) مع اسم المجلد (FolderNameLabel) ووصفه (FolderDescLabel) وعرض عدد السكربتات ("سكربتات: X").
+--    • وإذا كان المجلد مغلق: أيقونة قفل (rbxassetid://4224275681) مع نص "مغلق" يظهر بنص ظلي جذاب، وعدم السماح بالفتح (مع إشعار عند النقر).
+-- في نافذة الواجهة تظهر صورة اللاعب واسمه في أعلى اليسار، وزر إغلاق (X) في أعلى اليمين.
+-- يوجد أيضاً زر بحث لتصفية المجلدات، وزر دائري (CircularButton) قابل للسحب بسلاسة.
 ---------------------------------------------
 
 local Luna = {}
@@ -30,7 +26,7 @@ local settings = {
     cornerRadius = UDim.new(0, 12),
     transparency = 0.2,
     telegramLink = "https://t.me/YourChannelLink",
-    folderIcon = "rbxassetid://123456789" -- ضع هنا معرف أيقونة المجلد للمجلد المفتوح
+    folderIcon = "rbxassetid://123456789" -- أيقونة المجلد المفتوح (يمكن تغييرها)
 }
 
 ---------------------------------------------
@@ -255,7 +251,7 @@ local function applyGlassEffect(folderButton)
         tween1.Completed:Wait()
         tween2:Play()
         tween2.Completed:Wait()
-        tweenGlass() -- حلقة مستمرة
+        tweenGlass()
     end
     spawn(tweenGlass)
 end
@@ -497,7 +493,7 @@ local function createMainInterface(parentGui)
     playerNameLabel.TextXAlignment = Enum.TextXAlignment.Left
     playerNameLabel.Parent = mainFrame
 
-    -- زر إغلاق (X) في نافذة الواجهة (بدون نص الإصدار)
+    -- زر إغلاق (X) في نافذة الواجهة (دون نص الإصدار)
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "CloseButton"
     closeButton.Size = UDim2.new(0, 30, 0, 30)
@@ -588,7 +584,7 @@ local function createMainInterface(parentGui)
         folderButton.Name = folderData.folderName or "Folder"
         folderButton.Size = UDim2.new(0, 450, 0, 60)
         folderButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        folderButton.BackgroundTransparency = folderData.locked and 0.8 or 0.4
+        folderButton.BackgroundTransparency = 0.4
         folderButton.Font = Enum.Font.SourceSans
         folderButton.Text = ""
         folderButton.Parent = foldersFrame
@@ -625,34 +621,51 @@ local function createMainInterface(parentGui)
         folderDescLabel.TextWrapped = true
         folderDescLabel.Parent = folderButton
 
-        -- عرض عدد السكربتات (للمجلد المفتوح فقط)
-        if not folderData.locked then
-            local scriptCount = #folderData.scripts
-            local scriptsLabel = Instance.new("TextLabel")
-            scriptsLabel.Name = "ScriptsLabel"
-            scriptsLabel.Size = UDim2.new(0, 120, 0, 20)
-            scriptsLabel.Position = UDim2.new(1, -130, 0, 5)
-            scriptsLabel.BackgroundTransparency = 1
-            scriptsLabel.Font = Enum.Font.GothamBold
-            scriptsLabel.Text = "سكربتات: " .. scriptCount
-            scriptsLabel.TextSize = 16
-            scriptsLabel.TextColor3 = settings.textColor
-            scriptsLabel.TextXAlignment = Enum.TextXAlignment.Right
-            scriptsLabel.Parent = folderButton
-        end
+        local scriptCount = #folderData.scripts
+        local scriptsLabel = Instance.new("TextLabel")
+        scriptsLabel.Name = "ScriptsLabel"
+        scriptsLabel.Size = UDim2.new(0, 120, 0, 20)
+        scriptsLabel.Position = UDim2.new(1, -130, 0, 5)
+        scriptsLabel.BackgroundTransparency = 1
+        scriptsLabel.Font = Enum.Font.GothamBold
+        scriptsLabel.Text = "سكربتات: " .. scriptCount
+        scriptsLabel.TextSize = 16
+        scriptsLabel.TextColor3 = settings.textColor
+        scriptsLabel.TextXAlignment = Enum.TextXAlignment.Right
+        scriptsLabel.Parent = folderButton
 
-        -- إذا كان المجلد مغلق، نعرض أيقونة قفل على شكل نص "🔒" في منتصف الزر
         if folderData.locked then
-            local lockedLabel = Instance.new("TextLabel")
-            lockedLabel.Name = "LockedLabel"
-            lockedLabel.Size = UDim2.new(0, 30, 0, 30)
-            lockedLabel.Position = UDim2.new(0, 10, 0.5, -15)
-            lockedLabel.BackgroundTransparency = 1
-            lockedLabel.Font = Enum.Font.GothamBold
-            lockedLabel.Text = "🔒"
-            lockedLabel.TextSize = 24
-            lockedLabel.TextColor3 = settings.accentColor
-            lockedLabel.Parent = folderButton
+            -- بالنسبة للمجلد المغلق: نعرض أيقونة القفل ونص "مغلق" بنص ظلي
+            local lockIcon = Instance.new("ImageLabel")
+            lockIcon.Name = "LockIcon"
+            lockIcon.Size = UDim2.new(0, 30, 0, 30)
+            lockIcon.Position = UDim2.new(0, 10, 0, 15)
+            lockIcon.BackgroundTransparency = 1
+            lockIcon.Image = "rbxassetid://4224275681"
+            lockIcon.Parent = folderButton
+
+            local lockedTextShadow = Instance.new("TextLabel")
+            lockedTextShadow.Name = "LockedTextShadow"
+            lockedTextShadow.Size = UDim2.new(0, 60, 0, 30)
+            lockedTextShadow.Position = UDim2.new(0, 50, 0, 15)
+            lockedTextShadow.BackgroundTransparency = 1
+            lockedTextShadow.Font = Enum.Font.GothamBold
+            lockedTextShadow.Text = "مغلق"
+            lockedTextShadow.TextSize = 20
+            lockedTextShadow.TextColor3 = Color3.new(0, 0, 0)
+            lockedTextShadow.Parent = folderButton
+
+            local lockedText = Instance.new("TextLabel")
+            lockedText.Name = "LockedText"
+            lockedText.Size = UDim2.new(0, 60, 0, 30)
+            lockedText.Position = UDim2.new(0, 48, 0, 13)
+            lockedText.BackgroundTransparency = 1
+            lockedText.Font = Enum.Font.GothamBold
+            lockedText.Text = "مغلق"
+            lockedText.TextSize = 20
+            lockedText.TextColor3 = Color3.fromRGB(200, 0, 0)
+            lockedText.Parent = folderButton
+
             folderButton.MouseButton1Click:Connect(function()
                 showNotification(parentGui, "هذا الملف مغلق ولا يمكن فتحه.")
             end)
@@ -673,7 +686,6 @@ end
 
 ---------------------------------------------
 -- دالة إنشاء واجهة المعلومات (Info Interface)
--- بحجم 500×400
 ---------------------------------------------
 local function createInfoInterface(parentGui)
     local openSound = Instance.new("Sound")
@@ -1149,8 +1161,7 @@ end
 
 ---------------------------------------------
 -- دالة إضافة مجلد مغلق يحتوي على سكربتات (AddLockedFolder)
--- هنا يتم إنشاء مجلد مغلق بحيث يظهر داخل زر المجلد نص "🔒" (قفل) بدلاً من أيقونة المجلد،
--- ويُظهر فقط اسم المجلد ووصفه، ولا يُمكن فتحه.
+-- عند النقر على مجلد مغلق يُظهر إشعار بأن الملف مغلق
 ---------------------------------------------
 function Luna:AddLockedFolder(folderData)
     if not folderData.timestamp then
