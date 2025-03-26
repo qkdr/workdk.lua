@@ -463,7 +463,7 @@ local function createMainInterface(parentGui)
     titleLabel.Position = UDim2.new(0.5, -200, 0, 20)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Text = "القائمة الرئيسية"
+    titleLabel.Text = "القائمة السكربتات"
     titleLabel.TextSize = 28
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = mainFrame
@@ -537,7 +537,7 @@ local function createMainInterface(parentGui)
     searchBox.Position = UDim2.new(0, 5, 0, 0)
     searchBox.BackgroundTransparency = 1
     searchBox.Font = Enum.Font.Gotham
-    searchBox.PlaceholderText = "ابحث عن مجلد..."
+    searchBox.PlaceholderText = "ابحث عن سكربتات..."
     searchBox.Text = ""
     searchBox.TextSize = 16
     searchBox.TextColor3 = settings.textColor
@@ -727,7 +727,7 @@ local function createInfoInterface(parentGui)
     titleLabel.Position = UDim2.new(0.5, -200, 0, 10)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Text = "معلومات التطبيق"
+    titleLabel.Text = "معلومات سكربت"
     titleLabel.TextSize = 28
     titleLabel.TextColor3 = settings.textColor
     titleLabel.Parent = infoFrame
@@ -1006,7 +1006,7 @@ local function createOptionPanel(parentGui)
     mainButton.Position = UDim2.new(0, 10, 0, 55)
     mainButton.BackgroundColor3 = settings.accentColor
     mainButton.Font = Enum.Font.GothamBold
-    mainButton.Text = "الواجهة"
+    mainButton.Text = "قائمة سكربتات"
     mainButton.TextSize = 18
     mainButton.TextColor3 = settings.textColor
     mainButton.Parent = optionPanel
