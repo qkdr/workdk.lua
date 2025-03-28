@@ -365,7 +365,7 @@ local function createFolderInterface(parentGui, folderData)
         viewButton.Position = UDim2.new(0, 10, 0, 130)
         viewButton.BackgroundColor3 = settings.accentColor
         viewButton.Font = Enum.Font.GothamBold
-        viewButton.Text = "مشاهدة"
+        viewButton.Text = "تنفيذ"
         viewButton.TextSize = 18
         viewButton.TextColor3 = settings.textColor
         viewButton.Parent = itemFrame
