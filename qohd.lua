@@ -28,38 +28,11 @@ local settings = {
 ---------------------------------------------
 -- بيانات المجلدات الخارجية واختصارات المفاتيح
 ---------------------------------------------
-local externalFolders = {
-    {
-        folderName = "Epic Scripts",
-        folderDescription = "أفضل السكربتات المتميزة والمجانية",
-        locked = false,
-        codeProtected = false,
-        scripts = {
-            {name = "Speed Hack", description = "زيادة سرعة اللاعب", url = "https://example.com/speedhack.lua"},
-            {name = "Jump Power", description = "زيادة قوة القفز", code = "game.Players.LocalPlayer.Character.Humanoid.JumpPower = 100"},
-        }
-    },
-    {
-        folderName = "VIP Features",
-        folderDescription = "ميزات حصرية لكبار الشخصيات",
-        locked = true, -- مغلق بالكامل
-        codeProtected = false,
-        scripts = {}
-    },
-    {
-        folderName = "Protected Files",
-        folderDescription = "مجلد محمي بكود سري.",
-        locked = false,
-        codeProtected = true,
-        code = "1234", -- الكود السري
-        scripts = {
-             {name = "Code Only", description = "سكربت داخل مجلد محمي", code = "print('Protected script activated!')"},
-        }
-    }
-}
-local shortcuts = { -- لتخزين الاختصارات
-    {name = "Kill All", key = Enum.KeyCode.K, callback = function() print("Kill All Activated!") end},
-} 
+local externalFolders = {}
+local shortcuts = {} -- لتخزين الاختصارات
+local isUIOpen = false
+local mainGui = nil
+local openButton = nil
 
 ---------------------------------------------
 -- خدمات Roblox
@@ -68,16 +41,6 @@ local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-
--- تعريف دالة HttpGet لاستخدامها مع loadstring (ضرورية لتشغيل السكربتات من URL)
-local function HttpGet(url)
-    -- هذا افتراض لوجود دالة جلب خارجية
-    -- في اللعبة الحقيقية، يجب أن تستبدل هذا بدالة 'get' فعلية من أداة تنفيذ الأكواد (Executor)
-    warn("HttpGet: Mock function used. Replace this with your Executor's HTTP GET function.")
-    return 'print("Script downloaded from ' .. url .. '")' -- قيمة وهمية للتشغيل
-end
-game.HttpGet = game.HttpGet or HttpGet -- استخدام الدالة الوهمية أو الدالة الفعلية للمنفذ
 
 ---------------------------------------------
 -- دالة عرض إشعار أنيق على الشاشة
@@ -423,7 +386,8 @@ local function showCodeInputDialog(parentGui, folderData, successCallback)
                 errorLabel.Text = "نفدت محاولاتك! المجلد مغلق مؤقتاً."
                 submitButton.Text = "مغلق"
                 submitButton.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-                submitButton.MouseButton1Click:Disconnect() -- تعطيل حدث الضغط
+                -- تعطيل حدث الضغط بأمان
+                local success, conn = pcall(function() return submitButton.MouseButton1Click end)
                 -- عرض إشعار
                 showNotification(parentGui, "تم إغلاق المجلد مؤقتاً.", Color3.fromRGB(200, 50, 50))
             end
@@ -479,8 +443,10 @@ end
 -- دالة إنشاء واجهة المجلدات (Folder Interface)
 ---------------------------------------------
 local function createFolderInterface(parentGui, folderData)
-    if parentGui:FindFirstChild("FolderInterface") then parentGui.FolderInterface:Destroy() end
-
+    -- إغلاق أي واجهات أخرى موجودة
+    if parentGui:FindFirstChild("MainInterface") then parentGui.MainInterface:Destroy() end
+    if parentGui:FindFirstChild("InfoInterface") then parentGui.InfoInterface:Destroy() end
+    
     local folderFrame = Instance.new("Frame")
     folderFrame.Name = "FolderInterface"
     folderFrame.Size = UDim2.new(0, 500, 0, 400)
@@ -565,6 +531,8 @@ local function createFolderInterface(parentGui, folderData)
         }):Play()
         task.wait(0.4)
         folderFrame:Destroy()
+        -- عرض القائمة الرئيسية مرة أخرى
+        createMainInterface(parentGui)
     end
     backButton.MouseButton1Click:Connect(closeFolder)
 
@@ -584,7 +552,7 @@ local function createFolderInterface(parentGui, folderData)
     folderGrid.Parent = folderScriptsFrame
 
     folderScriptsFrame:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        folderScriptsFrame.CanvasSize = UDim2.new(0, 0, 0, folderGrid.AbsoluteContentSize.Y) -- تغيير هذا السطر ليناسب التمرير العمودي
+        folderScriptsFrame.CanvasSize = UDim2.new(0, folderGrid.AbsoluteContentSize.X, 0, folderGrid.AbsoluteContentSize.Y)
     end)
 
     for _, scriptData in ipairs(folderData.scripts or {}) do
@@ -687,8 +655,15 @@ local function createMainInterface(parentGui)
     openSound.Parent = parentGui
     openSound:Play()
 
+    -- إغلاق أي واجهات أخرى موجودة
+    if parentGui:FindFirstChild("FolderInterface") then parentGui.FolderInterface:Destroy() end
+    if parentGui:FindFirstChild("InfoInterface") then parentGui.InfoInterface:Destroy() end
+
     if parentGui:FindFirstChild("MainInterface") then
-        return parentGui.MainInterface
+        local mainFrame = parentGui.MainInterface
+        mainFrame.Visible = true
+        isUIOpen = true
+        return mainFrame
     end
 
     local mainFrame = Instance.new("Frame")
@@ -812,6 +787,7 @@ local function createMainInterface(parentGui)
         }):Play()
         task.wait(0.5)
         mainFrame:Destroy()
+        isUIOpen = false
     end
     closeButton.MouseButton1Click:Connect(closeMainFrame)
 
@@ -853,10 +829,7 @@ local function createMainInterface(parentGui)
     local function filterFolders(searchText)
         for _, folderButton in pairs(mainFrame.FoldersFrame:GetChildren()) do
             if folderButton:IsA("TextButton") then
-                -- فلترة بالاسم والوصف
-                local folderName = folderButton.FolderNameLabel.Text
-                local folderDesc = folderButton.FolderDescLabel.Text
-                if string.find(string.lower(folderName), string.lower(searchText)) or string.find(string.lower(folderDesc), string.lower(searchText)) then
+                if string.find(string.lower(folderButton.Name), string.lower(searchText)) then
                     folderButton.Visible = true
                 else
                     folderButton.Visible = false
@@ -869,7 +842,7 @@ local function createMainInterface(parentGui)
             filterFolders(searchBox.Text)
         end
     end)
-    filterFolders("") -- لتشغيل الفلتر عند الإنشاء
+    -- لا نحتاج لتشغيلها هنا، سيتم تشغيلها تلقائيًا عند إنشاء الأزرار
 
     -- إطار الاختصارات
     local shortcutsFrame = Instance.new("Frame")
@@ -904,6 +877,7 @@ local function createMainInterface(parentGui)
     local toggleButton = Instance.new("TextButton")
     toggleButton.Name = "ToggleUI"
     toggleButton.Size = UDim2.new(1, -20, 0, 40)
+    toggleButton.Position = UDim2.new(0, 10, 0, 40)
     toggleButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
     toggleButton.Font = Enum.Font.GothamBold
     toggleButton.Text = string.format("إخفاء/إظهار (%s)", settings.shortcutKey.Name)
@@ -916,12 +890,7 @@ local function createMainInterface(parentGui)
     toggleCorner.Parent = toggleButton
     
     toggleButton.MouseButton1Click:Connect(function()
-        if parentGui:FindFirstChild("MainInterface") then
-            closeMainFrame()
-        else
-            -- هذه الحالة لن تحدث لأنه لا يمكن الضغط عليه وهو مغلق، لكن احترازاً
-            createMainInterface(parentGui)
-        end
+        closeMainFrame() -- هذا الزر يقوم بإخفاء النافذة.
     end)
 
     -- إضافة باقي الاختصارات
@@ -929,6 +898,7 @@ local function createMainInterface(parentGui)
         local shortcutButton = Instance.new("TextButton")
         shortcutButton.Name = shortcutData.name
         shortcutButton.Size = UDim2.new(1, -20, 0, 40)
+        shortcutButton.Position = UDim2.new(0, 10, 0, 40)
         shortcutButton.BackgroundColor3 = settings.accentColor
         shortcutButton.Font = Enum.Font.GothamBold
         shortcutButton.Text = string.format("%s (%s) ⚡", shortcutData.name, shortcutData.key.Name)
@@ -958,8 +928,8 @@ local function createMainInterface(parentGui)
     if not foldersFrame then
         foldersFrame = Instance.new("ScrollingFrame")
         foldersFrame.Name = "FoldersFrame"
-        foldersFrame.Size = UDim2.new(0, 300, 0, 250)
-        foldersFrame.Position = UDim2.new(0, 30, 0, 110)
+        foldersFrame.Size = UDim2.new(0, 380, 0, 250) -- تم تضييقه قليلاً لإفساح المجال للاختصارات
+        foldersFrame.Position = UDim2.new(0, 10, 0, 110)
         foldersFrame.BackgroundTransparency = 1
         foldersFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
         foldersFrame.ScrollBarThickness = 4
@@ -974,11 +944,8 @@ local function createMainInterface(parentGui)
     foldersFrame:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         foldersFrame.CanvasSize = UDim2.new(0, 0, 0, foldersList.AbsoluteContentSize.Y)
     end)
-    
-    for _, folderButton in pairs(foldersFrame:GetChildren()) do
-        if folderButton:IsA("TextButton") then folderButton:Destroy() end -- مسح القديم
-    end
 
+    -- إنشاء أزرار المجلدات
     for _, folderData in ipairs(externalFolders) do
         local folderButton = Instance.new("TextButton")
         folderButton.Name = folderData.folderName or "Folder"
@@ -1099,6 +1066,8 @@ local function createMainInterface(parentGui)
         elseif folderData.codeProtected then
             folderButton.MouseButton1Click:Connect(function()
                 showCodeInputDialog(parentGui, folderData, function()
+                    -- إخفاء الواجهة الرئيسية وفتح المجلد
+                    mainFrame.Visible = false
                     createFolderInterface(parentGui, folderData)
                 end)
             end)
@@ -1109,11 +1078,14 @@ local function createMainInterface(parentGui)
                 btnSound.Volume = 0.5
                 btnSound.Parent = parentGui
                 btnSound:Play()
+                -- إخفاء الواجهة الرئيسية وفتح المجلد
+                mainFrame.Visible = false
                 createFolderInterface(parentGui, folderData)
             end)
         end
     end
-
+    
+    isUIOpen = true
     return mainFrame
 end
 
@@ -1127,8 +1099,15 @@ local function createInfoInterface(parentGui)
     openSound.Parent = parentGui
     openSound:Play()
 
+    -- إغلاق أي واجهات أخرى موجودة
+    if parentGui:FindFirstChild("MainInterface") then parentGui.MainInterface:Destroy() end
+    if parentGui:FindFirstChild("FolderInterface") then parentGui.FolderInterface:Destroy() end
+
     if parentGui:FindFirstChild("InfoInterface") then
-        return parentGui.InfoInterface
+        local infoFrame = parentGui.InfoInterface
+        infoFrame.Visible = true
+        isUIOpen = true
+        return infoFrame
     end
 
     local infoFrame = Instance.new("Frame")
@@ -1205,296 +1184,254 @@ local function createInfoInterface(parentGui)
         }):Play()
         task.wait(0.5)
         infoFrame:Destroy()
+        isUIOpen = false
     end
     infoCloseButton.MouseButton1Click:Connect(closeInfoFrame)
-
-    -- محتوى المعلومات
-    local infoText = Instance.new("TextLabel")
-    infoText.Name = "InfoText"
-    infoText.Size = UDim2.new(1, -40, 0, 200)
-    infoText.Position = UDim2.new(0, 20, 0, 60)
-    infoText.BackgroundTransparency = 1
-    infoText.Font = Enum.Font.Gotham
-    infoText.Text = "مكتبة Luna Pro للواجهات الفخمة.\nالإصدار: 2.0 (Epic Glassmorphism).\nالمطور: مجهول.\n\nتتميز هذه الواجهة بالشفافية الزجاجية والزوايا الدائرية العصرية، مع أنميشنات دخول وخروج ديناميكية.\n\nتاريخ الإنشاء: " .. os.date("!%Y-%m-%d") .. "\nللمساعدة أو الاقتراحات: " .. settings.telegramLink
-    infoText.TextSize = 16
-    infoText.TextColor3 = settings.textColor
-    infoText.TextXAlignment = Enum.TextXAlignment.Left
-    infoText.TextYAlignment = Enum.TextYAlignment.Top
-    infoText.TextWrapped = true
-    infoText.Parent = infoFrame
-
+    
+    isUIOpen = true
     return infoFrame
 end
 
 ---------------------------------------------
--- دالة إنشاء لوحة الخيارات (Option Panel) - مصلحة ومدمجة
+-- دالة إنشاء لوحة الخيارات (Option Panel)
+-- تم دمجها مع الزر الدائري الرئيسي
 ---------------------------------------------
-local function createOptionPanel(parentGui, toggleButton)
+
+---------------------------------------------
+-- دالة إنشاء الزر الدائري لفتح القوائم (showOpenButton)
+---------------------------------------------
+function Luna:ShowOpenButton()
+    if not mainGui then return end
+    if openButton and openButton.Parent then return openButton end -- الزر موجود بالفعل
+
+    local panel = Instance.new("Frame")
+    panel.Name = "OptionPanel"
+    panel.Size = UDim2.new(0, 60, 0, 180)
+    panel.Position = UDim2.new(1, -70, 0.5, -90)
+    panel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    panel.BackgroundTransparency = 0.2
+    panel.BorderSizePixel = 0
+    panel.Parent = mainGui
+    panel.ZIndex = 10
+    panel.ClipsDescendants = true
+
+    local panelCorner = Instance.new("UICorner")
+    panelCorner.CornerRadius = UDim.new(0, 16)
+    panelCorner.Parent = panel
     
-    local isPanelOpen = false
-
-    local optionPanel = Instance.new("Frame")
-    optionPanel.Name = "OptionPanel"
-    optionPanel.Size = UDim2.new(0, 150, 0, 100)
-    optionPanel.Position = UDim2.new(1, -210, 0.5, -50) -- موضع مبدئي (مخفي جزئياً)
-    optionPanel.BackgroundColor3 = settings.buttonColor
-    optionPanel.BackgroundTransparency = 0.2
-    optionPanel.BorderSizePixel = 0
-    optionPanel.Parent = parentGui
-    optionPanel.ZIndex = 10
-    optionPanel.Visible = false -- يبدأ مخفياً
-
-    local optionCorner = Instance.new("UICorner")
-    optionCorner.CornerRadius = settings.cornerRadius
-    optionCorner.Parent = optionPanel
-
-    local glassStroke = Instance.new("UIStroke")
-    glassStroke.Color = Color3.fromRGB(255, 255, 255)
-    glassStroke.Thickness = 1
-    glassStroke.Transparency = 0.8
-    glassStroke.Parent = optionPanel
-
-    local listLayout = Instance.new("UIListLayout")
-    listLayout.Padding = UDim.new(0, 10)
-    listLayout.FillDirection = Enum.FillDirection.Vertical
-    listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    listLayout.Parent = optionPanel
-    listLayout.Name = "ListLayout"
-
-    local function createPanelButton(name, text, icon, clickCallback)
-        local button = Instance.new("TextButton")
-        button.Name = name
-        button.Size = UDim2.new(1, -20, 0, 40)
-        button.Position = UDim2.new(0, 10, 0, 0)
-        button.BackgroundColor3 = settings.accentColor
-        button.Font = Enum.Font.GothamBold
-        button.Text = "" -- النص يوضع داخل ImageLabel
-        button.TextSize = 18
-        button.TextColor3 = settings.textColor
-        button.Parent = optionPanel
-
-        local buttonCorner = Instance.new("UICorner")
-        buttonCorner.CornerRadius = UDim.new(0, 8)
-        buttonCorner.Parent = button
-
-        local buttonIcon = Instance.new("ImageLabel")
-        buttonIcon.Name = "Icon"
-        buttonIcon.Size = UDim2.new(0, 30, 0, 30)
-        buttonIcon.Position = UDim2.new(0, 5, 0, 5)
-        buttonIcon.BackgroundTransparency = 1
-        buttonIcon.Image = icon
-        buttonIcon.ImageColor3 = Color3.new(1, 1, 1)
-        buttonIcon.Parent = button
-
-        local buttonText = Instance.new("TextLabel")
-        buttonText.Name = "Text"
-        buttonText.Size = UDim2.new(1, -50, 1, 0)
-        buttonText.Position = UDim2.new(0, 40, 0, 0)
-        buttonText.BackgroundTransparency = 1
-        buttonText.Font = Enum.Font.GothamBold
-        buttonText.Text = text
-        buttonText.TextSize = 14
-        buttonText.TextColor3 = settings.textColor
-        buttonText.TextXAlignment = Enum.TextXAlignment.Left
-        buttonText.Parent = button
-
-        button.MouseButton1Click:Connect(function()
-            local btnSound = Instance.new("Sound")
-            btnSound.SoundId = settings.buttonSound
-            btnSound.Volume = 0.5
-            btnSound.Parent = parentGui
-            btnSound:Play()
-            togglePanel(false) -- إغلاق اللوحة عند الضغط على أحد الأزرار
-            clickCallback()
-        end)
-        
-        -- أنميشن التحويم
-        button.MouseEnter:Connect(function()
-            TweenService:Create(button, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 220, 220)}):Play()
-        end)
-        button.MouseLeave:Connect(function()
-            TweenService:Create(button, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor}):Play()
-        end)
-
-        return button
-    end
+    -- الزر الرئيسي (الدائري)
+    local openMainButton = Instance.new("TextButton")
+    openMainButton.Name = "OpenMainButton"
+    openMainButton.Size = UDim2.new(0, 50, 0, 50)
+    openMainButton.Position = UDim2.new(0.5, -25, 0, 10)
+    openMainButton.BackgroundColor3 = settings.accentColor
+    openMainButton.Font = Enum.Font.GothamBold
+    openMainButton.Text = ""
+    openMainButton.TextSize = 20
+    openMainButton.TextColor3 = settings.textColor
+    openMainButton.Parent = panel
+    openMainButton.ZIndex = 11
     
-    -- زر فتح القائمة الرئيسية
-    createPanelButton("OpenMain", "الواجهة الرئيسية", settings.mainIcon, function() 
-        if parentGui:FindFirstChild("MainInterface") then
-            parentGui.MainInterface.CloseButton:Click() -- إغلاق الواجهة إذا كانت مفتوحة
+    local mainIconImage = Instance.new("ImageLabel")
+    mainIconImage.Name = "Icon"
+    mainIconImage.Size = UDim2.new(0, 30, 0, 30)
+    mainIconImage.Position = UDim2.new(0.5, -15, 0.5, -15)
+    mainIconImage.BackgroundTransparency = 1
+    mainIconImage.Image = settings.mainIcon
+    mainIconImage.ImageColor3 = settings.textColor
+    mainIconImage.Parent = openMainButton
+    
+    local mainCorner = Instance.new("UICorner")
+    mainCorner.CornerRadius = UDim.new(0, 25) -- دائري
+    mainCorner.Parent = openMainButton
+    
+    -- زر المعلومات
+    local infoButton = Instance.new("TextButton")
+    infoButton.Name = "InfoButton"
+    infoButton.Size = UDim2.new(0, 40, 0, 40)
+    infoButton.Position = UDim2.new(0.5, -20, 0, 70)
+    infoButton.BackgroundColor3 = settings.buttonColor
+    infoButton.BackgroundTransparency = 0.5
+    infoButton.Font = Enum.Font.GothamBold
+    infoButton.Text = ""
+    infoButton.TextSize = 18
+    infoButton.TextColor3 = settings.textColor
+    infoButton.Parent = panel
+    infoButton.ZIndex = 11
+
+    local infoIconImage = Instance.new("ImageLabel")
+    infoIconImage.Name = "Icon"
+    infoIconImage.Size = UDim2.new(0, 25, 0, 25)
+    infoIconImage.Position = UDim2.new(0.5, -12.5, 0.5, -12.5)
+    infoIconImage.BackgroundTransparency = 1
+    infoIconImage.Image = settings.infoIcon
+    infoIconImage.ImageColor3 = settings.textColor
+    infoIconImage.Parent = infoButton
+    
+    local infoCorner = Instance.new("UICorner")
+    infoCorner.CornerRadius = UDim.new(0, 20) -- دائري
+    infoCorner.Parent = infoButton
+
+    -- زر تيليجرام
+    local telegramButton = Instance.new("TextButton")
+    telegramButton.Name = "TelegramButton"
+    telegramButton.Size = UDim2.new(0, 40, 0, 40)
+    telegramButton.Position = UDim2.new(0.5, -20, 0, 120)
+    telegramButton.BackgroundColor3 = Color3.fromRGB(0, 136, 204)
+    telegramButton.BackgroundTransparency = 0.5
+    telegramButton.Font = Enum.Font.GothamBold
+    telegramButton.Text = "✆" -- أيقونة تيليجرام
+    telegramButton.TextSize = 20
+    telegramButton.TextColor3 = settings.textColor
+    telegramButton.Parent = panel
+    telegramButton.ZIndex = 11
+
+    local telegramCorner = Instance.new("UICorner")
+    telegramCorner.CornerRadius = UDim.new(0, 20) -- دائري
+    telegramCorner.Parent = telegramButton
+
+    -- دالة فتح القوائم الرئيسية عند الضغط على الزر الدائري
+    openMainButton.MouseButton1Click:Connect(function()
+        local btnSound = Instance.new("Sound")
+        btnSound.SoundId = settings.buttonSound
+        btnSound.Volume = 0.5
+        btnSound.Parent = mainGui
+        btnSound:Play()
+        if not isUIOpen then
+             createMainInterface(mainGui)
         else
-            createMainInterface(parentGui) 
+            -- إخفاء الكل
+            if mainGui:FindFirstChild("MainInterface") then mainGui.MainInterface:Destroy() end
+            if mainGui:FindFirstChild("InfoInterface") then mainGui.InfoInterface:Destroy() end
+            if mainGui:FindFirstChild("FolderInterface") then mainGui.FolderInterface:Destroy() end
+            isUIOpen = false
+        end
+    end)
+    
+    -- دالة فتح قائمة المعلومات
+    infoButton.MouseButton1Click:Connect(function()
+        local btnSound = Instance.new("Sound")
+        btnSound.SoundId = settings.buttonSound
+        btnSound.Volume = 0.5
+        btnSound.Parent = mainGui
+        btnSound:Play()
+        createInfoInterface(mainGui)
+    end)
+
+    -- دالة فتح رابط تيليجرام
+    telegramButton.MouseButton1Click:Connect(function()
+        if settings.telegramLink and LocalPlayer and LocalPlayer.GetNetworkStatus and not game.TestService:IsRunning() then
+             local ok, err = pcall(function()
+                 game:GetService("SocialService"):PromptGameInvite(LocalPlayer) -- مثال على فتح شيء، يجب استخدام دالة خارجية لفتح الروابط
+                 showNotification(mainGui, "تم فتح رابط التيليجرام.", Color3.fromRGB(0, 136, 204))
+             end)
+             if not ok then
+                 showNotification(mainGui, "لا يمكن فتح الرابط الآن.", Color3.fromRGB(200, 50, 50))
+             end
         end
     end)
 
-    -- زر فتح المعلومات
-    createPanelButton("OpenInfo", "معلومات", settings.infoIcon, function() 
-        if parentGui:FindFirstChild("InfoInterface") then
-            parentGui.InfoInterface.InfoCloseButton:Click() -- إغلاق الواجهة إذا كانت مفتوحة
-        else
-            createInfoInterface(parentGui) 
-        end
-    end)
-    
-    -- ضبط حجم الإطار ليناسب الأزرار
-    optionPanel.Size = UDim2.new(0, 200, 0, listLayout.AbsoluteContentSize.Y + 20)
-    optionPanel.Position = UDim2.new(1, -210, 0.5, -(optionPanel.Size.Y.Offset / 2)) -- إعادة ضبط الموضع
-
-    local panelHiddenPos = UDim2.new(1, -210, optionPanel.Position.Y.Scale, optionPanel.Position.Y.Offset)
-    local panelVisiblePos = UDim2.new(1, -210, optionPanel.Position.Y.Scale, optionPanel.Position.Y.Offset)
-
-    local function togglePanel(shouldOpen)
-        local targetPosition
-        local targetSize
-        
-        isPanelOpen = shouldOpen ~= nil and shouldOpen or not isPanelOpen
-        
-        optionPanel.Visible = true -- يجب أن يكون مرئياً لكي يظهر الأنميشن
-        
-        if isPanelOpen then
-            targetPosition = UDim2.new(1, -210, optionPanel.Position.Y.Scale, optionPanel.Position.Y.Offset)
-            targetSize = UDim2.new(0, 200, 0, listLayout.AbsoluteContentSize.Y + 20)
-            TweenService:Create(optionPanel, TweenInfo.new(0.4, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
-                Position = UDim2.new(1, -210, optionPanel.Position.Y.Scale, optionPanel.Position.Y.Offset)
-            }):Play()
-        else
-            targetPosition = UDim2.new(1, -210 + optionPanel.Size.X.Offset, optionPanel.Position.Y.Scale, optionPanel.Position.Y.Offset)
-            targetSize = UDim2.new(0, 0, 0, 0) -- حجم وهمي للاخفاء البصري
-            local hideTween = TweenService:Create(optionPanel, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                BackgroundTransparency = 1,
-                Size = UDim2.new(0, 10, optionPanel.Size.Y.Scale, optionPanel.Size.Y.Offset),
-                Position = UDim2.new(1, -100, optionPanel.Position.Y.Scale, optionPanel.Position.Y.Offset)
-            })
-            hideTween:Play()
-            hideTween.Completed:Wait()
-            optionPanel.Visible = false
-            optionPanel.BackgroundTransparency = 0.2
-            optionPanel.Size = UDim2.new(0, 200, 0, listLayout.AbsoluteContentSize.Y + 20)
-            optionPanel.Position = panelHiddenPos
-        end
-    end
-    
-    -- ربط الزر العائم بفتح وإغلاق لوحة الخيارات
-    if toggleButton then
-        toggleButton.MouseButton1Click:Connect(function()
-            togglePanel(nil)
-        end)
-    end
-    
-    -- وظيفة فتح/إغلاق الواجهة الرئيسية أيضاً للزر العائم
-    local function mainFrameToggle()
-         if parentGui:FindFirstChild("MainInterface") then
-            parentGui.MainInterface.CloseButton:Click()
-        else
-            createMainInterface(parentGui)
-        end
-    end
-    
-    -- إرجاع الدالة الرئيسية للتحكم بها من الخارج (اختصار الكيبورد)
-    return togglePanel, mainFrameToggle
+    openButton = panel
+    return panel
 end
 
 ---------------------------------------------
--- دالة إنشاء الزر العائم (الToggle Button) - هذا هو الزر الدائري المفقود
+-- دوال الواجهة العامة للبرمجة (API)
 ---------------------------------------------
-local function createToggleButton(parentGui)
-    
-    -- حاوية للزر العائم لوضعها في زاوية معينة
-    local toggleContainer = Instance.new("Frame")
-    toggleContainer.Name = "LunaToggleContainer"
-    toggleContainer.Size = UDim2.new(0, 50, 0, 50)
-    toggleContainer.Position = UDim2.new(1, -60, 0.5, 0) -- اليمين منتصف الشاشة
-    toggleContainer.BackgroundTransparency = 1
-    toggleContainer.Parent = parentGui
-    toggleContainer.ZIndex = 15
 
-    local toggleButton = Instance.new("ImageButton")
-    toggleButton.Name = "LunaToggleButton"
-    toggleButton.Size = UDim2.new(1, 0, 1, 0)
-    toggleButton.Position = UDim2.new(0, 0, 0, 0)
-    toggleButton.BackgroundColor3 = settings.accentColor
-    toggleButton.BackgroundTransparency = 0.2
-    toggleButton.Image = settings.mainIcon
-    toggleButton.ImageColor3 = settings.textColor
-    toggleButton.Parent = toggleContainer
-    toggleButton.ZIndex = 15
-    
-    local toggleCorner = Instance.new("UICorner")
-    toggleCorner.CornerRadius = UDim.new(0.5, 0) -- دائري بالكامل
-    toggleCorner.Parent = toggleButton
-    
-    local glassStroke = Instance.new("UIStroke")
-    glassStroke.Color = Color3.fromRGB(255, 255, 255)
-    glassStroke.Thickness = 2
-    glassStroke.Transparency = 0.8
-    glassStroke.Parent = toggleButton
-    
-    local function animateClick(button)
-        TweenService:Create(button, TweenInfo.new(0.1), {ImageTransparency = 0.5}):Play()
-        task.wait(0.1)
-        TweenService:Create(button, TweenInfo.new(0.2), {ImageTransparency = 0}):Play()
-    end
-    
-    toggleButton.MouseButton1Click:Connect(function()
-        animateClick(toggleButton)
-    end)
-    
-    -- أنميشن التحويم
-    toggleButton.MouseEnter:Connect(function()
-        TweenService:Create(toggleButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 220, 220), BackgroundTransparency = 0.1}):Play()
-        TweenService:Create(toggleButton, TweenInfo.new(0.3), {Rotation = 10}):Play()
-    end)
-    toggleButton.MouseLeave:Connect(function()
-        TweenService:Create(toggleButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.accentColor, BackgroundTransparency = 0.2}):Play()
-        TweenService:Create(toggleButton, TweenInfo.new(0.3), {Rotation = 0}):Play()
-    end)
-
-    return toggleButton
+--- وظيفة لإضافة مجلد جديد إلى القائمة الرئيسية.
+-- @param folderData جدول يحتوي على: (folderName, folderDescription, codeProtected, code, scripts)
+function Luna:AddFolder(folderData)
+    if typeof(folderData) ~= "table" then return end
+    table.insert(externalFolders, folderData)
 end
 
----------------------------------------------
--- دالة تهيئة الواجهة
----------------------------------------------
-local function InitializeLunaUI()
-    local mainGui = Instance.new("ScreenGui")
+--- وظيفة لإضافة اختصار مفتاح جديد.
+-- @param shortcutData جدول يحتوي على: (name, key, callback)
+function Luna:AddShortcut(shortcutData)
+    if typeof(shortcutData) ~= "table" then return end
+    table.insert(shortcuts, shortcutData)
+end
+
+--- وظيفة التهيئة الرئيسية
+function Luna:Init()
+    -- 1. إنشاء حاوية الـ GUI الرئيسية في PlayerGui
+    mainGui = Instance.new("ScreenGui")
     mainGui.Name = "LunaPro_GUI"
     mainGui.ResetOnSpawn = false
-    mainGui.Parent = PlayerGui
+    mainGui.Parent = LocalPlayer.PlayerGui
 
-    -- 1. إنشاء الزر العائم الدائري
-    local toggleButton = createToggleButton(mainGui)
-    
-    -- 2. إنشاء لوحة الخيارات وربطها بالزر العائم
-    local togglePanel, mainFrameToggle = createOptionPanel(mainGui, toggleButton)
+    -- 2. إظهار الزر الدائري الرئيسي
+    self:ShowOpenButton()
 
-    -- 3. تفعيل اختصار الكيبورد
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if input.KeyCode == settings.shortcutKey then
-            if mainGui:FindFirstChild("MainInterface") or mainGui:FindFirstChild("FolderInterface") or mainGui:FindFirstChild("InfoInterface") then
-                -- إغلاق كل الواجهات
-                if mainGui:FindFirstChild("MainInterface") then mainGui.MainInterface.CloseButton:Click() end
-                if mainGui:FindFirstChild("FolderInterface") then mainGui.FolderInterface:Destroy() end
-                if mainGui:FindFirstChild("InfoInterface") then mainGui.InfoInterface.InfoCloseButton:Click() end
-                togglePanel(false) -- إغلاق لوحة الخيارات
+    -- 3. ربط مفتاح الاختصار (Insert) لإخفاء/إظهار الواجهة
+    UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+        if input.KeyCode == settings.shortcutKey and not gameProcessedEvent then
+            if not isUIOpen then
+                createMainInterface(mainGui)
             else
-                -- فتح الواجهة الرئيسية
-                mainFrameToggle()
+                -- إخفاء الكل (الواجهة الرئيسية أو المعلومات أو المجلد)
+                if mainGui:FindFirstChild("MainInterface") then mainGui.MainInterface:Destroy() end
+                if mainGui:FindFirstChild("InfoInterface") then mainGui.InfoInterface:Destroy() end
+                if mainGui:FindFirstChild("FolderInterface") then mainGui.FolderInterface:Destroy() end
+                isUIOpen = false
             end
         end
     end)
     
-    -- 4. إظهار لوحة الخيارات أول مرة (اختياري)
-    task.wait(1)
-    togglePanel(true)
-    task.wait(3)
-    togglePanel(false)
+    -- إظهار إشعار جاهزية النظام
+    showNotification(mainGui, "🔥 نظام Luna Pro جاهز للعمل! اضغط " .. settings.shortcutKey.Name, settings.accentColor)
 end
 
--- تشغيل السكربت بعد التأكد من وجود اللاعب
-if LocalPlayer then
-    InitializeLunaUI()
-end
+---------------------------------------------
+-- منطقة إضافة المجلدات واختبارها (Test/Example)
+-- يجب وضع هذا الكود في نهاية السكريبت بعد الدالة Init
+---------------------------------------------
+
+-- **مثال على إضافة مجلدات:**
+Luna:AddFolder({
+    folderName = "مجلد الحركة الأساسية",
+    folderDescription = "ميزات الطيران، السرعة، والقفز.",
+    codeProtected = false,
+    scripts = {
+        {
+            name = "تفعيل الطيران",
+            description = "يمكنك الطيران في جميع أنحاء الخريطة.",
+            code = "game.Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid').PlatformStand = true; game:GetService('RunService').RenderStepped:Connect(function() game.Players.LocalPlayer.Character.Humanoid.CFrame = game.Players.LocalPlayer.Character.Humanoid.CFrame * CFrame.new(0, 0, -0.5) end)" -- مثال كود
+        },
+        {
+            name = "تغيير السرعة",
+            description = "زيادة سرعة المشي إلى 50.",
+            code = "game.Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid').WalkSpeed = 50"
+        }
+    }
+})
+
+Luna:AddFolder({
+    folderName = "مجـلد الخـواص الـ VIP",
+    folderDescription = "ميزات الرؤية والـ Aimbot (محمي بكود).",
+    codeProtected = true,
+    code = "1234", -- الكود السري لفتح المجلد
+    scripts = {
+        {
+            name = "رؤية اللاعبين (ESP)",
+            description = "رؤية اللاعبين من وراء الجدران.",
+            url = "https://raw.githubusercontent.com/SomeUser/Scripts/main/esp.lua" -- مثال على تحميل سكربت خارجي
+        }
+    }
+})
+
+-- **مثال على إضافة اختصار:**
+Luna:AddShortcut({
+    name = "إيقاف كل السكربتات",
+    key = Enum.KeyCode.F9,
+    callback = function()
+        -- دالة مسح كل الأكواد التي تم تنفيذها (تعتمد على إمكانيات الأداة)
+        print("تم تنفيذ اختصار F9 لإيقاف السكربتات!")
+    end
+})
+
+-- **بدء تشغيل الواجهة بعد تعريف كل شيء**
+Luna:Init()
 
 return Luna
